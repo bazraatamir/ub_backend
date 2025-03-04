@@ -1,0 +1,70 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
+// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "mysql"
+  url      = env("DATABASE_URL")
+}
+
+model Restaurant {
+  id                Int                 @id @default(autoincrement())
+  name              String
+  email             String              @unique
+  passwordHash      String
+  contactInfo       String?
+  registeredAt      DateTime            @default(now())
+  details           RestaurantDetails?
+  menuItems         MenuItem[]
+  signatureDishes   SignatureDish[]
+  images            RestaurantImage[]
+}
+
+model RestaurantDetails {
+  id                Int       @id @default(autoincrement())
+  restaurantId      Int       @unique
+  description       String?
+  location          String?
+  district          String?
+  mainImage         String?
+  createdAt         DateTime  @default(now())
+  updatedAt         DateTime  @updatedAt
+  restaurant        Restaurant @relation(fields: [restaurantId], references: [id])
+}
+
+model MenuItem {
+  id                Int       @id @default(autoincrement())
+  restaurantId      Int
+  name              String
+  description       String?
+  price             Float
+  imageUrl          String?
+  category          String?
+  createdAt         DateTime  @default(now())
+  restaurant        Restaurant @relation(fields: [restaurantId], references: [id])
+}
+
+model SignatureDish {
+  id                Int       @id @default(autoincrement())
+  restaurantId      Int
+  name              String
+  description       String?
+  price             Float?
+  imageUrl          String?
+  createdAt         DateTime  @default(now())
+  restaurant        Restaurant @relation(fields: [restaurantId], references: [id])
+}
+
+model RestaurantImage {
+  id                Int       @id @default(autoincrement())
+  restaurantId      Int
+  imageUrl          String
+  description       String?
+  restaurant        Restaurant @relation(fields: [restaurantId], references: [id])
+}
