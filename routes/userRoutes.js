@@ -1,0 +1,19 @@
+const express = require("express");
+const { body } = require("express-validator");
+const { auth } = require("../middleware/auth");
+const {
+  register,
+  login,
+  getProfile,
+  updateProfile,
+} = require("../controllers/userController");
+
+const router = express.Router();
+
+// Routes
+router.post("/register", register);
+router.post("/login", login);
+router.get("/profile", auth, getProfile);
+router.put("/profile", auth, updateProfile);
+
+module.exports = router;
