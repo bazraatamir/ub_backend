@@ -1,6 +1,6 @@
 const express = require("express");
 const cors = require("cors");
-const { PrismaClient } = require("@prisma/client");
+const {PrismaClient} = require("@prisma/client");
 require("dotenv").config();
 
 const userRoutes = require("./routes/userRoutes");
@@ -18,7 +18,11 @@ const prisma = new PrismaClient();
 
 app.use(cors());
 app.use(express.json());
-app.use(express.urlencoded({ extended: true }));
+app.use((err, req, res, next) => {
+  console.error(err.stack);
+  res.status(500).json({error: err.message});
+});
+app.use(express.urlencoded({extended: true}));
 
 app.use("/api/users", userRoutes);
 app.use("/api/restaurants", restaurantRoutes);
@@ -32,11 +36,11 @@ app.use("/api/restaurant-tags", restaurantTagRoutes);
 
 app.use((err, req, res, next) => {
   console.error(err.stack);
-  res.status(500).json({ error: "Something went wrong!" });
+  res.status(500).json({error: "Something went wrong!"});
 });
 
 app.use((req, res) => {
-  res.status(404).json({ error: "Not found" });
+  res.status(404).json({error: "Not found"});
 });
 
 const PORT = process.env.PORT || 3000;
