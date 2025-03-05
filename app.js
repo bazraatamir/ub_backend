@@ -18,10 +18,12 @@ const prisma = new PrismaClient();
 
 app.use(cors());
 app.use(express.json());
+
 app.use((err, req, res, next) => {
   console.error(err.stack);
   res.status(500).json({error: err.message});
 });
+
 app.use(express.urlencoded({extended: true}));
 
 app.use("/api/users", userRoutes);
