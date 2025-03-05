@@ -1,5 +1,7 @@
 const { PrismaClient } = require("@prisma/client");
 const prisma = new PrismaClient();
+const fs = require('fs');
+const path = require('path');
 
 exports.getAllMenuItems = async (req, res) => {
   try {
@@ -36,7 +38,9 @@ exports.getMenuItemById = async (req, res) => {
 
 exports.createMenuItem = async (req, res) => {
   try {
-    const { name, description, price, imageUrl, menuId } = req.body;
+    const { name, description, price, menuId } = req.body;
+    const imageUrl = req.file ? `/uploads/${req.file.filename}` : null;
+
     const menuItem = await prisma.menuItem.create({
       data: {
         name,
@@ -48,6 +52,9 @@ exports.createMenuItem = async (req, res) => {
     });
     res.status(201).json(menuItem);
   } catch (error) {
+    if (req.file) {
+      fs.unlinkSync(req.file.path);
+    }
     res.status(500).json({ error: error.message });
   }
 };
@@ -55,7 +62,20 @@ exports.createMenuItem = async (req, res) => {
 exports.updateMenuItem = async (req, res) => {
   try {
     const { id } = req.params;
-    const { name, description, price, imageUrl } = req.body;
+    const { name, description, price } = req.body;
+
+    const oldMenuItem = await prisma.menuItem.findUnique({
+      where: { id: parseInt(id) }
+    });
+
+    if (!oldMenuItem) {
+      if (req.file) {
+        fs.unlinkSync(req.file.path);
+      }
+      return res.status(404).json({ error: "Menu item not found" });
+    }
+
+    const imageUrl = req.file ? `/uploads/${req.file.filename}` : oldMenuItem.imageUrl;
 
     const menuItem = await prisma.menuItem.update({
       where: { id: parseInt(id) },
@@ -67,8 +87,19 @@ exports.updateMenuItem = async (req, res) => {
       },
     });
 
+    // Delete old image if new image was uploaded
+    if (req.file && oldMenuItem.imageUrl) {
+      const oldImagePath = path.join(__dirname, '..', oldMenuItem.imageUrl);
+      if (fs.existsSync(oldImagePath)) {
+        fs.unlinkSync(oldImagePath);
+      }
+    }
+
     res.json(menuItem);
   } catch (error) {
+    if (req.file) {
+      fs.unlinkSync(req.file.path);
+    }
     res.status(500).json({ error: error.message });
   }
 };
@@ -76,9 +107,26 @@ exports.updateMenuItem = async (req, res) => {
 exports.deleteMenuItem = async (req, res) => {
   try {
     const { id } = req.params;
+
+    const menuItem = await prisma.menuItem.findUnique({
+      where: { id: parseInt(id) }
+    });
+
+    if (!menuItem) {
+      return res.status(404).json({ error: "Menu item not found" });
+    }
+
     await prisma.menuItem.delete({
       where: { id: parseInt(id) },
     });
+
+    // Delete image file
+    if (menuItem.imageUrl) {
+      const imagePath = path.join(__dirname, '..', menuItem.imageUrl);
+      if (fs.existsSync(imagePath)) {
+        fs.unlinkSync(imagePath);
+      }
+    }
 
     res.json({ message: "Menu item deleted successfully" });
   } catch (error) {

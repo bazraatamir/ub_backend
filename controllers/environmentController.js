@@ -1,5 +1,7 @@
 const { PrismaClient } = require("@prisma/client");
 const prisma = new PrismaClient();
+const fs = require('fs');
+const path = require('path');
 
 exports.getAllEnvironments = async (req, res) => {
   try {
@@ -36,7 +38,13 @@ exports.getEnvironmentById = async (req, res) => {
 
 exports.createEnvironment = async (req, res) => {
   try {
-    const { imageUrl, description, restaurantId } = req.body;
+    const { description, restaurantId } = req.body;
+    const imageUrl = req.file ? `/uploads/${req.file.filename}` : null;
+
+    if (!imageUrl) {
+      return res.status(400).json({ error: "Image is required" });
+    }
+
     const environment = await prisma.environment.create({
       data: {
         imageUrl,
@@ -46,6 +54,10 @@ exports.createEnvironment = async (req, res) => {
     });
     res.status(201).json(environment);
   } catch (error) {
+    // Delete uploaded file if database operation fails
+    if (req.file) {
+      fs.unlinkSync(req.file.path);
+    }
     res.status(500).json({ error: error.message });
   }
 };
@@ -53,7 +65,20 @@ exports.createEnvironment = async (req, res) => {
 exports.updateEnvironment = async (req, res) => {
   try {
     const { id } = req.params;
-    const { imageUrl, description } = req.body;
+    const { description } = req.body;
+    
+    const oldEnvironment = await prisma.environment.findUnique({
+      where: { id: parseInt(id) }
+    });
+
+    if (!oldEnvironment) {
+      if (req.file) {
+        fs.unlinkSync(req.file.path);
+      }
+      return res.status(404).json({ error: "Environment not found" });
+    }
+
+    const imageUrl = req.file ? `/uploads/${req.file.filename}` : oldEnvironment.imageUrl;
 
     const environment = await prisma.environment.update({
       where: { id: parseInt(id) },
@@ -63,8 +88,19 @@ exports.updateEnvironment = async (req, res) => {
       },
     });
 
+    // Delete old image if new image was uploaded
+    if (req.file && oldEnvironment.imageUrl) {
+      const oldImagePath = path.join(__dirname, '..', oldEnvironment.imageUrl);
+      if (fs.existsSync(oldImagePath)) {
+        fs.unlinkSync(oldImagePath);
+      }
+    }
+
     res.json(environment);
   } catch (error) {
+    if (req.file) {
+      fs.unlinkSync(req.file.path);
+    }
     res.status(500).json({ error: error.message });
   }
 };
@@ -72,9 +108,26 @@ exports.updateEnvironment = async (req, res) => {
 exports.deleteEnvironment = async (req, res) => {
   try {
     const { id } = req.params;
+    
+    const environment = await prisma.environment.findUnique({
+      where: { id: parseInt(id) }
+    });
+
+    if (!environment) {
+      return res.status(404).json({ error: "Environment not found" });
+    }
+
     await prisma.environment.delete({
       where: { id: parseInt(id) },
     });
+
+    // Delete image file
+    if (environment.imageUrl) {
+      const imagePath = path.join(__dirname, '..', environment.imageUrl);
+      if (fs.existsSync(imagePath)) {
+        fs.unlinkSync(imagePath);
+      }
+    }
 
     res.json({ message: "Environment deleted successfully" });
   } catch (error) {
