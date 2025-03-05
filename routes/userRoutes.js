@@ -10,7 +10,6 @@ const {
 
 const router = express.Router();
 
-// Routes
 router.post("/register", register);
 router.post("/login", login);
 router.get("/profile", auth, getProfile);

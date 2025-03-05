@@ -89,7 +89,6 @@ exports.deleteTag = async (req, res) => {
   }
 };
 
-// Restaurant Tag Relations
 exports.addTagToRestaurant = async (req, res) => {
   try {
     const { restaurantId, tagId } = req.body;

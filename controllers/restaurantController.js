@@ -49,7 +49,6 @@ const createRestaurant = async (req, res) => {
   }
 };
 
-// Get all restaurants
 const getAllRestaurants = async (req, res) => {
   try {
     const restaurants = await prisma.restaurant.findMany({
@@ -76,7 +75,6 @@ const getAllRestaurants = async (req, res) => {
   }
 };
 
-// Get restaurant by ID
 const getRestaurantById = async (req, res) => {
   try {
     const { id } = req.params;
@@ -109,7 +107,6 @@ const getRestaurantById = async (req, res) => {
   }
 };
 
-// Update restaurant
 const updateRestaurant = async (req, res) => {
   try {
     const { id } = req.params;
@@ -147,7 +144,6 @@ const updateRestaurant = async (req, res) => {
   }
 };
 
-// Delete restaurant
 const deleteRestaurant = async (req, res) => {
   try {
     const { id } = req.params;

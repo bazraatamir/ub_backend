@@ -8,7 +8,6 @@ router.post("/", tagController.createTag);
 router.put("/:id", tagController.updateTag);
 router.delete("/:id", tagController.deleteTag);
 
-// Restaurant Tag Relations
 router.post("/restaurant", tagController.addTagToRestaurant);
 router.delete(
   "/restaurant/:restaurantId/:tagId",

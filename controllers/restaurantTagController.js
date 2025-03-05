@@ -108,11 +108,11 @@ exports.addTagToRestaurant = async (req, res) => {
 
     res.status(201).json(restaurantTag);
   } catch (error) {
+    console.log(error)
     res.status(500).json({ message: "Server error", error: error.message });
   }
 };
 
-// Remove tag from restaurant
 exports.removeTagFromRestaurant = async (req, res) => {
   try {
     const { restaurantId, tagId } = req.params;

@@ -31,6 +31,7 @@ exports.createMenu = async (req, res) => {
 
     res.status(201).json(menu);
   } catch (error) {
+    console.log(error)
     res.status(500).json({ message: "Server error", error: error.message });
   }
 };
@@ -55,7 +56,6 @@ exports.getMenusByRestaurant = async (req, res) => {
   }
 };
 
-// Get menu by ID
 exports.getMenuById = async (req, res) => {
   try {
     const { id } = req.params;
@@ -78,7 +78,6 @@ exports.getMenuById = async (req, res) => {
   }
 };
 
-// Update menu
 exports.updateMenu = async (req, res) => {
   try {
     const { id } = req.params;
@@ -116,7 +115,6 @@ exports.updateMenu = async (req, res) => {
   }
 };
 
-// Delete menu
 exports.deleteMenu = async (req, res) => {
   try {
     const { id } = req.params;

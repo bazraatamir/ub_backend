@@ -11,7 +11,6 @@ const {
 
 const router = express.Router();
 
-// Validation middleware
 const restaurantValidation = [
   body("name").trim().notEmpty().withMessage("Name is required"),
   body("location").trim().notEmpty().withMessage("Location is required"),
@@ -20,7 +19,6 @@ const restaurantValidation = [
   body("districtId").optional().isInt().withMessage("Invalid district ID"),
 ];
 
-// Routes
 router.post(
   "/",
   auth,

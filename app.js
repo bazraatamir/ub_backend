@@ -16,12 +16,10 @@ const restaurantTagRoutes = require("./routes/restaurantTagRoutes");
 const app = express();
 const prisma = new PrismaClient();
 
-// Middleware
 app.use(cors());
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
-// Routes
 app.use("/api/users", userRoutes);
 app.use("/api/restaurants", restaurantRoutes);
 app.use("/api/districts", districtRoutes);
@@ -32,13 +30,11 @@ app.use("/api/signature-dishes", signatureDishRoutes);
 app.use("/api/tags", tagRoutes);
 app.use("/api/restaurant-tags", restaurantTagRoutes);
 
-// Error handling middleware
 app.use((err, req, res, next) => {
   console.error(err.stack);
   res.status(500).json({ error: "Something went wrong!" });
 });
 
-// 404 handler
 app.use((req, res) => {
   res.status(404).json({ error: "Not found" });
 });
