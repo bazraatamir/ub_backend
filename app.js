@@ -2,6 +2,9 @@ const express = require("express");
 const cors = require("cors");
 const {PrismaClient} = require("@prisma/client");
 require("dotenv").config();
+const fileUpload = require('express-fileupload');
+const fs = require('fs');
+const path = require('path');
 
 const userRoutes = require("./routes/userRoutes");
 const restaurantRoutes = require("./routes/restaurantRoutes");
@@ -16,13 +19,24 @@ const restaurantTagRoutes = require("./routes/restaurantTagRoutes");
 const app = express();
 const prisma = new PrismaClient();
 
+// Create uploads directory with absolute path
+const uploadDir = path.join(process.cwd(), 'uploads');
+if (!fs.existsSync(uploadDir)) {
+    fs.mkdirSync(uploadDir, { recursive: true });
+}
+
 app.use(cors());
 app.use(express.json());
-app.use((err, req, res, next) => {
-  console.error(err.stack);
-  res.status(500).json({error: err.message});
-});
 app.use(express.urlencoded({extended: true}));
+
+// File upload middleware configuration
+app.use(fileUpload({
+    createParentPath: true,
+    limits: { fileSize: 5 * 1024 * 1024 }, // 5MB limit
+    useTempFiles: false, // Don't use temp files
+    debug: true,
+    abortOnLimit: true,
+}));
 
 app.use("/api/users", userRoutes);
 app.use("/api/restaurants", restaurantRoutes);
@@ -34,7 +48,8 @@ app.use("/api/signature-dishes", signatureDishRoutes);
 app.use("/api/tags", tagRoutes);
 app.use("/api/restaurant-tags", restaurantTagRoutes);
 
-app.use('/uploads', express.static('uploads'));
+// Serve uploads directory
+app.use('/uploads', express.static(uploadDir));
 
 app.use((err, req, res, next) => {
   console.error(err.stack);

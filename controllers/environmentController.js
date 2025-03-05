@@ -2,111 +2,91 @@ const { PrismaClient } = require("@prisma/client");
 const prisma = new PrismaClient();
 const fs = require('fs');
 const path = require('path');
+const asyncErrorHandle = require("../middleware/asyncHandler");
 
-exports.getAllEnvironments = async (req, res) => {
-  try {
+exports.getAllEnvironments = asyncErrorHandle(async (req, res) => {
     const environments = await prisma.environment.findMany({
-      include: {
-        restaurant: true,
-      },
+      include: {restaurant: true,},
     });
     res.json(environments);
-  } catch (error) {
-    res.status(500).json({ error: error.message });
-  }
-};
+});
 
-exports.getEnvironmentById = async (req, res) => {
-  try {
+exports.getEnvironmentById = asyncErrorHandle(async (req, res) => {
     const { id } = req.params;
     const environment = await prisma.environment.findUnique({
       where: { id: parseInt(id) },
-      include: {
-        restaurant: true,
-      },
+      include: {restaurant: true,},
     });
-
     if (!environment) {
       return res.status(404).json({ error: "Environment not found" });
     }
-
     res.json(environment);
-  } catch (error) {
-    res.status(500).json({ error: error.message });
-  }
-};
+});
 
-exports.createEnvironment = async (req, res) => {
-  try {
+exports.createEnvironment = asyncErrorHandle(async (req, res) => {
     const { description, restaurantId } = req.body;
-    const imageUrl = req.file ? `/uploads/${req.file.filename}` : null;
+    let imageUrl = null;
 
-    if (!imageUrl) {
-      return res.status(400).json({ error: "Image is required" });
+    if (req.files && req.files.imageUrl) {
+        const file = req.files.imageUrl;
+        const fileExt = path.extname(file.name);
+        const fileName = Date.now() + fileExt;
+        const uploadPath = path.join(process.cwd(), 'uploads', fileName);
+        
+        const imageBuffer = Buffer.from(file.data);
+        fs.writeFileSync(uploadPath, imageBuffer);
+        
+        imageUrl = `/uploads/${fileName}`;
     }
 
     const environment = await prisma.environment.create({
-      data: {
-        imageUrl,
-        description,
-        restaurantId: parseInt(restaurantId),
-      },
+        data: { imageUrl, description, restaurantId: parseInt(restaurantId) },
     });
     res.status(201).json(environment);
-  } catch (error) {
-    // Delete uploaded file if database operation fails
-    if (req.file) {
-      fs.unlinkSync(req.file.path);
-    }
-    res.status(500).json({ error: error.message });
-  }
-};
+});
 
-exports.updateEnvironment = async (req, res) => {
-  try {
+exports.updateEnvironment = asyncErrorHandle(async (req, res) => {
     const { id } = req.params;
     const { description } = req.body;
     
     const oldEnvironment = await prisma.environment.findUnique({
-      where: { id: parseInt(id) }
+        where: { id: parseInt(id) }
     });
 
     if (!oldEnvironment) {
-      if (req.file) {
-        fs.unlinkSync(req.file.path);
-      }
-      return res.status(404).json({ error: "Environment not found" });
+        return res.status(404).json({ error: "Environment not found" });
     }
 
-    const imageUrl = req.file ? `/uploads/${req.file.filename}` : oldEnvironment.imageUrl;
+    let imageUrl = oldEnvironment.imageUrl;
+
+    if (req.files && req.files.imageUrl) {
+        const file = req.files.imageUrl;
+        const fileExt = path.extname(file.name);
+        const fileName = Date.now() + fileExt;
+        const uploadPath = path.join(process.cwd(), 'uploads', fileName);
+        
+        const imageBuffer = Buffer.from(file.data);
+        fs.writeFileSync(uploadPath, imageBuffer);
+        
+        imageUrl = `/uploads/${fileName}`;
+
+        if (oldEnvironment.imageUrl) {
+            const oldImagePath = path.join(process.cwd(), oldEnvironment.imageUrl);
+            if (fs.existsSync(oldImagePath)) {
+                fs.unlinkSync(oldImagePath);
+            }
+        }
+    }
 
     const environment = await prisma.environment.update({
-      where: { id: parseInt(id) },
-      data: {
-        imageUrl,
-        description,
-      },
+        where: { id: parseInt(id) },
+        data: { imageUrl, description },
     });
 
-    // Delete old image if new image was uploaded
-    if (req.file && oldEnvironment.imageUrl) {
-      const oldImagePath = path.join(__dirname, '..', oldEnvironment.imageUrl);
-      if (fs.existsSync(oldImagePath)) {
-        fs.unlinkSync(oldImagePath);
-      }
-    }
-
     res.json(environment);
-  } catch (error) {
-    if (req.file) {
-      fs.unlinkSync(req.file.path);
-    }
-    res.status(500).json({ error: error.message });
-  }
-};
+});
 
-exports.deleteEnvironment = async (req, res) => {
-  try {
+exports.deleteEnvironment = asyncErrorHandle(async (req, res) => {
     const { id } = req.params;
     
     const environment = await prisma.environment.findUnique({
@@ -123,14 +103,11 @@ exports.deleteEnvironment = async (req, res) => {
 
     // Delete image file
     if (environment.imageUrl) {
-      const imagePath = path.join(__dirname, '..', environment.imageUrl);
+      const imagePath = path.join(process.cwd(), environment.imageUrl);
       if (fs.existsSync(imagePath)) {
         fs.unlinkSync(imagePath);
       }
     }
 
     res.json({ message: "Environment deleted successfully" });
-  } catch (error) {
-    res.status(500).json({ error: error.message });
-  }
-};
+});

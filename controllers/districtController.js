@@ -1,5 +1,6 @@
 const {PrismaClient} = require("@prisma/client");
 const prisma = new PrismaClient();
+const asyncErrorHandle = require("../middleware/asyncHandler");
 
 exports.getAllDistricts = asyncErrorHandle(async (req, res, next) => {
   const districts = await prisma.district.findMany({

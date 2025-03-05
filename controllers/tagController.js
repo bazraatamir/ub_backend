@@ -1,126 +1,67 @@
 const { PrismaClient } = require("@prisma/client");
 const prisma = new PrismaClient();
+const asyncErrorHandle = require("../middleware/asyncHandler");
 
-exports.getAllTags = async (req, res) => {
-  try {
+exports.getAllTags = asyncErrorHandle(async (req, res) => {
     const tags = await prisma.tag.findMany({
-      include: {
-        restaurants: {
-          include: {
-            restaurant: true,
-          },
-        },
-      },
+      include: {restaurants:{include:{restaurant: true,},},},
     });
     res.json(tags);
-  } catch (error) {
-    res.status(500).json({ error: error.message });
-  }
-};
+});
 
-exports.getTagById = async (req, res) => {
-  try {
+exports.getTagById = asyncErrorHandle(async (req, res) => {
     const { id } = req.params;
     const tag = await prisma.tag.findUnique({
       where: { id: parseInt(id) },
-      include: {
-        restaurants: {
-          include: {
-            restaurant: true,
-          },
-        },
-      },
+      include: {restaurants: {include: {restaurant: true,},},},
     });
 
     if (!tag) {
       return res.status(404).json({ error: "Tag not found" });
     }
-
     res.json(tag);
-  } catch (error) {
-    res.status(500).json({ error: error.message });
-  }
-};
+});
 
-exports.createTag = async (req, res) => {
-  try {
+exports.createTag = asyncErrorHandle(async (req, res) => {
     const { name, description } = req.body;
     const tag = await prisma.tag.create({
-      data: {
-        name,
-        description,
-      },
+      data: {name,description,},
     });
     res.status(201).json(tag);
-  } catch (error) {
-    res.status(500).json({ error: error.message });
-  }
-};
+});
 
-exports.updateTag = async (req, res) => {
-  try {
+exports.updateTag = asyncErrorHandle(async (req, res) => {
     const { id } = req.params;
     const { name, description } = req.body;
 
     const tag = await prisma.tag.update({
       where: { id: parseInt(id) },
-      data: {
-        name,
-        description,
-      },
+      data: {name,description,},
     });
-
     res.json(tag);
-  } catch (error) {
-    res.status(500).json({ error: error.message });
-  }
-};
+});
 
-exports.deleteTag = async (req, res) => {
-  try {
+exports.deleteTag = asyncErrorHandle(async (req, res) => {
     const { id } = req.params;
     await prisma.tag.delete({
       where: { id: parseInt(id) },
     });
-
     res.json({ message: "Tag deleted successfully" });
-  } catch (error) {
-    res.status(500).json({ error: error.message });
-  }
-};
+});
 
-exports.addTagToRestaurant = async (req, res) => {
-  try {
+exports.addTagToRestaurant = asyncErrorHandle(async (req, res) => {
     const { restaurantId, tagId } = req.body;
     const restaurantTag = await prisma.restaurantTag.create({
-      data: {
-        restaurantId: parseInt(restaurantId),
-        tagId: parseInt(tagId),
-      },
-      include: {
-        restaurant: true,
-        tag: true,
-      },
+      data: {restaurantId: parseInt(restaurantId),tagId: parseInt(tagId),},
+      include: {restaurant: true,tag: true,},
     });
     res.status(201).json(restaurantTag);
-  } catch (error) {
-    res.status(500).json({ error: error.message });
-  }
-};
+});
 
-exports.removeTagFromRestaurant = async (req, res) => {
-  try {
+exports.removeTagFromRestaurant = asyncErrorHandle(async (req, res) => {
     const { restaurantId, tagId } = req.params;
     await prisma.restaurantTag.delete({
-      where: {
-        restaurantId_tagId: {
-          restaurantId: parseInt(restaurantId),
-          tagId: parseInt(tagId),
-        },
-      },
+      where: {restaurantId_tagId: {  restaurantId: parseInt(restaurantId),  tagId: parseInt(tagId),},},
     });
     res.json({ message: "Tag removed from restaurant successfully" });
-  } catch (error) {
-    res.status(500).json({ error: error.message });
-  }
-};
+});
