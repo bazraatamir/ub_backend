@@ -8,14 +8,14 @@ datasource db {
 }
 
 model User {
-  id          Int         @id @default(autoincrement())
-  username    String      @unique
-  email       String      @unique
+  id          Int           @id @default(autoincrement())
+  username    String        @unique
+  email       String        @unique
   password    String
-  role        Role        @default(USER)
-  restaurant  Restaurant? 
-  createdAt   DateTime    @default(now())
-  updatedAt   DateTime    @updatedAt
+  role        Role          @default(USER)
+  restaurants Restaurant[]
+  createdAt   DateTime      @default(now())
+  updatedAt   DateTime      @updatedAt
 }
 
 enum Role {
@@ -31,11 +31,11 @@ model Restaurant {
   description   String?           @db.Text
   imageUrl      String?
   districtId    Int?
-  userId        Int               @unique
+  userId        Int
   createdAt     DateTime          @default(now())
   updatedAt     DateTime          @updatedAt
-  user          User              @relation(fields: [userId], references: [id])
-  district      District?         @relation(fields: [districtId], references: [id])
+  user          User              @relation(fields: [userId], references: [id], onDelete: Cascade, onUpdate: Cascade)
+  district      District?         @relation(fields: [districtId], references: [id], onDelete: SetNull, onUpdate: Cascade)
   environment   Environment[]
   signatureDish SignatureDish[]
   tags          RestaurantTag[]

@@ -1,16 +1,15 @@
 const express = require("express");
 const router = express.Router();
 const menuController = require("../controllers/menuController");
-const { auth } = require("../middleware/auth")
+const { auth } = require("../middleware/auth");
 
+// Public routes
 router.get("/restaurant/:restaurantId", menuController.getMenusByRestaurant);
-
 router.get("/:id", menuController.getMenuById);
 
-router.post("/",auth, menuController.createMenu);
-
-router.put("/:id", menuController.updateMenu);
-
-router.delete("/:id", menuController.deleteMenu);
+// Protected routes - need authentication
+router.post("/", auth, menuController.createMenu);
+router.put("/:id", auth, menuController.updateMenu);
+router.delete("/:id", auth, menuController.deleteMenu);
 
 module.exports = router;

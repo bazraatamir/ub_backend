@@ -33,16 +33,33 @@ exports.getMenuById = asyncErrorHandle(async (req, res) => {
 exports.updateMenu = asyncErrorHandle(async (req, res) => {
   const { id } = req.params;
   const { name, description } = req.body;
-  const menu = await findMenu(id);
-  if (!menu) return res.status(404).json({ message: "Menu not found" });
-  if (menu.restaurant.userId !== req.user.id) return res.status(403).json({ message: "Not authorized" });
+  
+  const menu = await prisma.menu.findUnique({
+    where: { id: parseInt(id) },
+    include: { 
+      menuItems: true,
+      restaurant: true 
+    }
+  });
+
+  if (!menu) {
+    return res.status(404).json({ message: "Menu not found" });
+  }
+
+  if (menu.restaurant.userId !== req.user.id) {
+    return res.status(403).json({ message: "Not authorized" });
+  }
 
   const updatedMenu = await prisma.menu.update({
     where: { id: parseInt(id) },
     data: { name, description },
-    include: { menuItems: true }
+    include: { 
+      menuItems: true,
+      restaurant: true
+    }
   });
-  res.json(updatedMenu);
+
+  return res.json(updatedMenu);
 });
 
 exports.deleteMenu = asyncErrorHandle(async (req, res) => {
