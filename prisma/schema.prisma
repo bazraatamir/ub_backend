@@ -30,6 +30,7 @@ model Restaurant {
   location      String
   description   String?           @db.Text
   imageUrl      String?
+  mediaType     String?
   districtId    Int?
   userId        Int
   createdAt     DateTime          @default(now())
@@ -51,7 +52,8 @@ model District {
 
 model Environment {
   id            Int         @id @default(autoincrement())
-  imageUrl      String
+  imageUrl      String      
+  mediaType     String?     
   description   String?     @db.Text
   restaurantId  Int
   restaurant    Restaurant  @relation(fields: [restaurantId], references: [id])
@@ -74,6 +76,7 @@ model MenuItem {
   description   String?     @db.Text
   price         Float
   imageUrl      String?
+  mediaType     String?
   createdAt     DateTime    @default(now())
   updatedAt     DateTime    @updatedAt
   menuId        Int
@@ -85,6 +88,7 @@ model SignatureDish {
   name          String
   description   String?     @db.Text
   imageUrl      String?
+  mediaType     String?
   restaurantId  Int
   restaurant    Restaurant  @relation(fields: [restaurantId], references: [id])
 }

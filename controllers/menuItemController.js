@@ -3,12 +3,47 @@ const prisma = new PrismaClient();
 const fs = require("fs");
 const path = require("path");
 const asyncErrorHandle = require("../middleware/asyncHandler");
+const sharp = require("sharp");
 
-const uploadImage = (file) => {
+const uploadMedia = async (file) => {
   const fileName = `${Date.now()}${path.extname(file.name)}`;
   const uploadPath = path.join(process.cwd(), "uploads", fileName);
-  fs.writeFileSync(uploadPath, file.data);
-  return `/uploads/${fileName}`;
+  
+  const allowedImageTypes = ['image/jpeg', 'image/png'];
+  const allowedVideoTypes = ['video/mp4', 'video/quicktime'];
+  const maxSize = 100 * 1024 * 1024;
+
+  if (![...allowedImageTypes, ...allowedVideoTypes].includes(file.mimetype)) {
+    throw new Error('Буруу төрлийн файл. Зөвхөн JPEG, PNG, болон MP4 файл оруулна уу.');
+  }
+
+  if (file.size > maxSize) {
+    throw new Error('Файл хэт том байна. Дээд хэмжээ 100MB байх ёстой.');
+  }
+
+  const isVideo = file.mimetype.startsWith('video/');
+  
+  if (isVideo) {
+    await file.mv(uploadPath);
+  } else {
+    const imageProcessor = sharp(file.data)
+      .resize(1024, 768, {
+        fit: 'inside',
+        withoutEnlargement: true
+      });
+
+    const ext = path.extname(file.name).toLowerCase();
+    if (ext === '.png') {
+      await imageProcessor.png({ quality: 75 }).toFile(uploadPath);
+    } else {
+      await imageProcessor.jpeg({ quality: 75 }).toFile(uploadPath);
+    }
+  }
+    
+  return {
+    url: `/uploads/${fileName}`,
+    type: isVideo ? 'video' : 'image'
+  };
 };
 
 const deleteImage = (imageUrl) => {
@@ -32,10 +67,28 @@ exports.getMenuItemById = asyncErrorHandle(async (req, res) => {
 
 exports.createMenuItem = asyncErrorHandle(async (req, res) => {
   const { name, description, price, menuId } = req.body;
-  const imageUrl = req.files?.imageUrl ? uploadImage(req.files.imageUrl) : null;
+  let mediaUrl = null;
+  let mediaType = null;
+
+  if (req.files?.media) {
+    try {
+      const uploadResult = await uploadMedia(req.files.media);
+      mediaUrl = uploadResult.url;
+      mediaType = uploadResult.type;
+    } catch (error) {
+      return res.status(400).json({ error: error.message });
+    }
+  }
 
   const menuItem = await prisma.menuItem.create({
-    data: { name, description, price: parseFloat(price), imageUrl, menuId: parseInt(menuId) }
+    data: {
+      name,
+      description,
+      price: parseFloat(price),
+      imageUrl: mediaUrl,
+      mediaType,
+      menuId: parseInt(menuId)
+    }
   });
   res.status(201).json(menuItem);
 });
@@ -47,7 +100,7 @@ exports.updateMenuItem = asyncErrorHandle(async (req, res) => {
   if (!menuItem) return res.status(404).json({ error: "Menu item not found" });
 
   if (req.files?.imageUrl) deleteImage(menuItem.imageUrl);
-  const imageUrl = req.files?.imageUrl ? uploadImage(req.files.imageUrl) : menuItem.imageUrl;
+  const imageUrl = req.files?.imageUrl ? uploadMedia(req.files.imageUrl) : menuItem.imageUrl;
 
   const updatedMenuItem = await prisma.menuItem.update({
     where: { id: parseInt(id) },

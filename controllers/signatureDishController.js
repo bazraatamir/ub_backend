@@ -3,6 +3,7 @@ const prisma = new PrismaClient();
 const asyncErrorHandle = require("../middleware/asyncHandler");
 const path = require("path");
 const fs = require("fs");
+const sharp = require("sharp");
 
 exports.getAllSignatureDishes = asyncErrorHandle(async (req, res) => {
     const signatureDishes = await prisma.signatureDish.findMany({
@@ -25,35 +26,72 @@ exports.getSignatureDishById = asyncErrorHandle(async (req, res) => {
     res.json(signatureDish);
 });
 
-exports.createSignatureDish = asyncErrorHandle(async (req, res) => {
-    const { name, description, restaurantId } = req.body;
-    let imageUrl = null;
+const uploadMedia = async (file) => {
+  const fileName = `${Date.now()}${path.extname(file.name)}`;
+  const uploadPath = path.join(process.cwd(), 'uploads', fileName);
+  
+  const allowedImageTypes = ['image/jpeg', 'image/png'];
+  const allowedVideoTypes = ['video/mp4', 'video/quicktime'];
+  const maxSize = 100 * 1024 * 1024;
 
-    if (req.files && req.files.imageUrl) {
-        const file = req.files.imageUrl;
-        const fileExt = path.extname(file.name);
-        const fileName = Date.now() + fileExt;
-        const uploadPath = path.join(process.cwd(), 'uploads', fileName);
-        
-        const imageBuffer = Buffer.from(file.data);
-        fs.writeFileSync(uploadPath, imageBuffer);
-        
-        imageUrl = `/uploads/${fileName}`;
+  if (![...allowedImageTypes, ...allowedVideoTypes].includes(file.mimetype)) {
+    throw new Error('Буруу төрлийн файл. Зөвхөн JPEG, PNG, болон MP4 файл оруулна уу.');
+  }
+
+  if (file.size > maxSize) {
+    throw new Error('Файл хэт том байна. Дээд хэмжээ 100MB байх ёстой.');
+  }
+
+  const isVideo = file.mimetype.startsWith('video/');
+  
+  if (isVideo) {
+    await file.mv(uploadPath);
+  } else {
+    const imageProcessor = sharp(file.data)
+      .resize(1024, 768, {
+        fit: 'inside',
+        withoutEnlargement: true
+      });
+
+    const ext = path.extname(file.name).toLowerCase();
+    if (ext === '.png') {
+      await imageProcessor.png({ quality: 75 }).toFile(uploadPath);
+    } else {
+      await imageProcessor.jpeg({ quality: 75 }).toFile(uploadPath);
     }
+  }
     
-    if (!name) {
-        return res.status(400).json({ error: "Name is required" });
-    }
+  return {
+    url: `/uploads/${fileName}`,
+    type: isVideo ? 'video' : 'image'
+  };
+};
 
-    const signatureDish = await prisma.signatureDish.create({
-        data: {
-            name,
-            description,
-            imageUrl,
-            restaurantId: parseInt(restaurantId),
-        },
-    });
-    res.status(201).json(signatureDish);
+exports.createSignatureDish = asyncErrorHandle(async (req, res) => {
+  const { name, description, restaurantId } = req.body;
+  let mediaUrl = null;
+  let mediaType = null;
+
+  if (req.files?.media) {
+    try {
+      const uploadResult = await uploadMedia(req.files.media);
+      mediaUrl = uploadResult.url;
+      mediaType = uploadResult.type;
+    } catch (error) {
+      return res.status(400).json({ error: error.message });
+    }
+  }
+
+  const signatureDish = await prisma.signatureDish.create({
+    data: {
+      name,
+      description,
+      imageUrl: mediaUrl,
+      mediaType,
+      restaurantId: parseInt(restaurantId),
+    },
+  });
+  res.status(201).json(signatureDish);
 });
 
 exports.updateSignatureDish = asyncErrorHandle(async (req, res) => {
@@ -72,12 +110,25 @@ exports.updateSignatureDish = asyncErrorHandle(async (req, res) => {
 
     if (req.files && req.files.imageUrl) {
         const file = req.files.imageUrl;
-        const fileExt = path.extname(file.name);
-        const fileName = Date.now() + fileExt;
+        const fileName = Date.now() + path.extname(file.name);
         const uploadPath = path.join(process.cwd(), 'uploads', fileName);
         
-        const imageBuffer = Buffer.from(file.data);
-        fs.writeFileSync(uploadPath, imageBuffer);
+        const imageProcessor = sharp(file.data)
+          .resize(1024, 768, {
+            fit: 'inside',
+            withoutEnlargement: true
+          });
+
+        const ext = path.extname(file.name).toLowerCase();
+        if (ext === '.png') {
+          await imageProcessor
+            .png({ quality: 75 })
+            .toFile(uploadPath);
+        } else {
+          await imageProcessor
+            .jpeg({ quality: 75 })
+            .toFile(uploadPath);
+        }
         
         imageUrl = `/uploads/${fileName}`;
 

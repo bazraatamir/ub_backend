@@ -4,6 +4,48 @@ const asyncErrorHandle = require("../middleware/asyncHandler");
 const prisma = new PrismaClient();
 const path = require('path');
 const fs = require('fs');
+const sharp = require("sharp");
+
+const uploadMedia = async (file) => {
+  const fileName = `${Date.now()}${path.extname(file.name)}`;
+  const uploadPath = path.join(process.cwd(), 'uploads', fileName);
+  
+  const allowedImageTypes = ['image/jpeg', 'image/png'];
+  const allowedVideoTypes = ['video/mp4', 'video/quicktime'];
+  const maxSize = 100 * 1024 * 1024; // 100MB
+
+  if (![...allowedImageTypes, ...allowedVideoTypes].includes(file.mimetype)) {
+    throw new Error('Буруу төрлийн файл. Зөвхөн JPEG, PNG, болон MP4 файл оруулна уу.');
+  }
+
+  if (file.size > maxSize) {
+    throw new Error('Файл хэт том байна. Дээд хэмжээ 100MB байх ёстой.');
+  }
+
+  const isVideo = file.mimetype.startsWith('video/');
+  
+  if (isVideo) {
+    await file.mv(uploadPath);
+  } else {
+    const imageProcessor = sharp(file.data)
+      .resize(1024, 768, {
+        fit: 'inside',
+        withoutEnlargement: true
+      });
+
+    const ext = path.extname(file.name).toLowerCase();
+    if (ext === '.png') {
+      await imageProcessor.png({ quality: 75 }).toFile(uploadPath);
+    } else {
+      await imageProcessor.jpeg({ quality: 75 }).toFile(uploadPath);
+    }
+  }
+    
+  return {
+    url: `/uploads/${fileName}`,
+    type: isVideo ? 'video' : 'image'
+  };
+};
 
 const createRestaurant = asyncErrorHandle(async (req, res) => {
   const errors = validationResult(req);
@@ -12,18 +54,17 @@ const createRestaurant = asyncErrorHandle(async (req, res) => {
   }
 
   const { name, location, description, districtId } = req.body;
-  let imageUrl = null;
+  let mediaUrl = null;
+  let mediaType = null;
 
-  if (req.files && req.files.imageUrl) {
-    const file = req.files.imageUrl;
-    const fileExt = path.extname(file.name);
-    const fileName = Date.now() + fileExt;
-    const uploadPath = path.join(process.cwd(), 'uploads', fileName);
-    
-    const imageBuffer = Buffer.from(file.data);
-    fs.writeFileSync(uploadPath, imageBuffer);
-    
-    imageUrl = `/uploads/${fileName}`;
+  if (req.files?.media) {
+    try {
+      const uploadResult = await uploadMedia(req.files.media);
+      mediaUrl = uploadResult.url;
+      mediaType = uploadResult.type;
+    } catch (error) {
+      return res.status(400).json({ error: error.message });
+    }
   }
 
   const restaurant = await prisma.restaurant.create({
@@ -31,7 +72,8 @@ const createRestaurant = asyncErrorHandle(async (req, res) => {
       name,
       location,
       description,
-      imageUrl,
+      imageUrl: mediaUrl,
+      mediaType,
       districtId: districtId ? parseInt(districtId) : null,
       userId: req.user.id,
     },
@@ -119,25 +161,22 @@ const updateRestaurant = asyncErrorHandle(async (req, res) => {
     return res.status(403).json({ message: "Not authorized" });
   }
 
-  let imageUrl = restaurant.imageUrl;
+  let mediaUrl = restaurant.imageUrl;
+  let mediaType = restaurant.mediaType;
 
-  if (req.files && req.files.imageUrl) {
-    const file = req.files.imageUrl;
-    const fileExt = path.extname(file.name);
-    const fileName = Date.now() + fileExt;
-    const uploadPath = path.join(process.cwd(), 'uploads', fileName);
-    
-    const imageBuffer = Buffer.from(file.data);
-    fs.writeFileSync(uploadPath, imageBuffer);
-    
-    imageUrl = `/uploads/${fileName}`;
-
-    // Delete old image if exists
-    if (restaurant.imageUrl) {
-      const oldImagePath = path.join(process.cwd(), restaurant.imageUrl);
-      if (fs.existsSync(oldImagePath)) {
-        fs.unlinkSync(oldImagePath);
+  if (req.files && req.files.media) {
+    try {
+      const uploadResult = await uploadMedia(req.files.media);
+      mediaUrl = uploadResult.url;
+      mediaType = uploadResult.type;
+      if (restaurant.imageUrl) {
+        const oldMediaPath = path.join(process.cwd(), restaurant.imageUrl);
+        if (fs.existsSync(oldMediaPath)) {
+          fs.unlinkSync(oldMediaPath);
+        }
       }
+    } catch (error) {
+      return res.status(400).json({ error: error.message });
     }
   }
 
@@ -147,7 +186,8 @@ const updateRestaurant = asyncErrorHandle(async (req, res) => {
       name,
       location,
       description,
-      imageUrl,
+      imageUrl: mediaUrl,
+      mediaType,
       districtId: districtId ? parseInt(districtId) : null,
     },
     include: {
@@ -204,11 +244,11 @@ const deleteRestaurant = asyncErrorHandle(async (req, res) => {
       where: { restaurantId: parseInt(id) },
     });
 
-    // Delete image if exists
+    // Delete media if exists
     if (restaurant.imageUrl) {
-      const imagePath = path.join(process.cwd(), restaurant.imageUrl);
-      if (fs.existsSync(imagePath)) {
-        fs.unlinkSync(imagePath);
+      const mediaPath = path.join(process.cwd(), restaurant.imageUrl);
+      if (fs.existsSync(mediaPath)) {
+        fs.unlinkSync(mediaPath);
       }
     }
 
