@@ -76,6 +76,7 @@ const createRestaurant = asyncErrorHandle(async (req, res) => {
       mediaType,
       districtId: districtId ? parseInt(districtId) : null,
       userId: req.user.id,
+      status: 'PENDING',
     },
     include: {
       district: true,
@@ -89,14 +90,48 @@ const createRestaurant = asyncErrorHandle(async (req, res) => {
     },
   });
 
-  res.status(201).json(restaurant);
+  res.status(201).json({
+    ...restaurant,
+    message: "Restaurant created successfully. Waiting for admin approval."
+  });
+});
+
+const approveRestaurant = asyncErrorHandle(async (req, res) => {
+  const { id } = req.params;
+
+  const restaurant = await prisma.restaurant.findUnique({
+    where: { id: parseInt(id) },
+  });
+
+  if (!restaurant) {
+    return res.status(404).json({ message: "Restaurant not found" });
+  }
+
+  const updatedRestaurant = await prisma.restaurant.update({
+    where: { id: parseInt(id) },
+    data: {
+      status: 'APPROVED',
+      updatedAt: new Date(),
+    },
+    include: {
+      district: true,
+      user: true,
+    },
+  });
+
+  res.json({
+    ...updatedRestaurant,
+    message: "Restaurant approved successfully"
+  });
 });
 
 const getAllRestaurants = asyncErrorHandle(async (req, res) => {
+  const whereClause = req.user?.role === 'ADMIN' || req.user?.role === 'RESTAURANT_OWNER'
+    ? { userId: req.user?.id }
+    : { status: 'APPROVED' };
+
   const restaurants = await prisma.restaurant.findMany({
-    where: {
-      userId: req.user?.id
-    },
+    where: whereClause,
     include: {
       district: true,
       environment: true,
@@ -142,6 +177,12 @@ const getRestaurantById = asyncErrorHandle(async (req, res) => {
     return res.status(404).json({ message: "Restaurant not found" });
   }
 
+  if (req.user?.role !== 'ADMIN' && 
+      restaurant.userId !== req.user?.id && 
+      restaurant.status !== 'APPROVED') {
+    return res.status(403).json({ message: "Restaurant is pending approval" });
+  }
+
   res.json(restaurant);
 });
 
@@ -157,7 +198,7 @@ const updateRestaurant = asyncErrorHandle(async (req, res) => {
     return res.status(404).json({ message: "Restaurant not found" });
   }
 
-  if (restaurant.userId !== req.user.id) {
+  if (restaurant.userId !== req.user.id && req.user.role !== 'ADMIN') {
     return res.status(403).json({ message: "Not authorized" });
   }
 
@@ -209,28 +250,23 @@ const deleteRestaurant = asyncErrorHandle(async (req, res) => {
     return res.status(404).json({ message: "Restaurant not found" });
   }
 
-  if (restaurant.userId !== req.user.id) {
+  if (restaurant.userId !== req.user.id && req.user.role !== 'ADMIN') {
     return res.status(403).json({ message: "Not authorized" });
   }
 
-  // Delete all related data first
   await prisma.$transaction(async (prisma) => {
-    // Delete all environments
     await prisma.environment.deleteMany({
       where: { restaurantId: parseInt(id) },
     });
 
-    // Delete all signature dishes
     await prisma.signatureDish.deleteMany({
       where: { restaurantId: parseInt(id) },
     });
 
-    // Delete all restaurant tags
     await prisma.restaurantTag.deleteMany({
       where: { restaurantId: parseInt(id) },
     });
 
-    // Delete all menu items first
     await prisma.menuItem.deleteMany({
       where: { 
         menu: {
@@ -239,12 +275,10 @@ const deleteRestaurant = asyncErrorHandle(async (req, res) => {
       },
     });
 
-    // Then delete all menus
     await prisma.menu.deleteMany({
       where: { restaurantId: parseInt(id) },
     });
 
-    // Delete media if exists
     if (restaurant.imageUrl) {
       const mediaPath = path.join(process.cwd(), restaurant.imageUrl);
       if (fs.existsSync(mediaPath)) {
@@ -252,7 +286,6 @@ const deleteRestaurant = asyncErrorHandle(async (req, res) => {
       }
     }
 
-    // Finally delete the restaurant
     await prisma.restaurant.delete({
       where: { id: parseInt(id) },
     });
@@ -267,4 +300,5 @@ module.exports = {
   getRestaurantById,
   updateRestaurant,
   deleteRestaurant,
+  approveRestaurant,
 };

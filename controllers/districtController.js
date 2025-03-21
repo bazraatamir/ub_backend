@@ -31,7 +31,6 @@ exports.updateDistrict = asyncErrorHandle(async (req, res) => {
 exports.deleteDistrict = asyncErrorHandle(async (req, res) => {
   const district = await findDistrict(req.params.id);
   if (!district) return res.status(404).json({ error: "District not found" });
-
   await prisma.district.delete({ where: { id: Number(req.params.id) } });
   res.json({ message: "District deleted successfully" });
 });

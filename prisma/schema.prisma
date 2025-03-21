@@ -8,14 +8,16 @@ datasource db {
 }
 
 model User {
-  id          Int           @id @default(autoincrement())
-  username    String        @unique
-  email       String        @unique
-  password    String
-  role        Role          @default(USER)
-  restaurants Restaurant[]
-  createdAt   DateTime      @default(now())
-  updatedAt   DateTime      @updatedAt
+  id                 Int           @id @default(autoincrement())
+  username           String        @unique
+  email              String        @unique
+  password           String
+  role               Role          @default(USER)
+  restaurants        Restaurant[] 
+  highlightsApproved Highlight[]   @relation("HighlightApprovedBy")
+  heroesApproved     Hero[]        @relation("HeroApprovedBy")
+  createdAt          DateTime      @default(now())
+  updatedAt          DateTime      @updatedAt
 }
 
 enum Role {
@@ -33,16 +35,48 @@ model Restaurant {
   mediaType     String?
   districtId    Int?
   userId        Int
+  status        String            @default("PENDING")
   createdAt     DateTime          @default(now())
   updatedAt     DateTime          @updatedAt
   user          User              @relation(fields: [userId], references: [id], onDelete: Cascade, onUpdate: Cascade)
   district      District?         @relation(fields: [districtId], references: [id], onDelete: SetNull, onUpdate: Cascade)
   environment   Environment[]
   signatureDish SignatureDish[]
+  highlight     Highlight[]
   tags          RestaurantTag[]
   menus         Menu[]
+  hero          Hero[]
 }
 
+model Highlight {
+  id            Int         @id @default(autoincrement())
+  restaurantId  Int
+  restaurant    Restaurant  @relation(fields: [restaurantId], references: [id], onDelete: Cascade)
+  status        Status      @default(PENDING)
+  createdAt     DateTime    @default(now())
+  updatedAt     DateTime    @updatedAt
+  approvedBy    Int?
+  approvedAt    DateTime?
+  admin         User?       @relation("HighlightApprovedBy", fields: [approvedBy], references: [id])
+}
+
+model Hero {
+  id            Int         @id @default(autoincrement())
+  restaurantId  Int
+  restaurant    Restaurant  @relation(fields: [restaurantId], references: [id], onDelete: Cascade)
+  status        Status      @default(PENDING)
+  createdAt     DateTime    @default(now())
+  updatedAt     DateTime    @updatedAt
+  approvedBy    Int?
+  approvedAt    DateTime? 
+  admin         User?       @relation("HeroApprovedBy", fields: [approvedBy], references: [id])
+}
+
+enum Status {
+  PENDING
+  APPROVED
+  REJECTED
+}
 model District {
   id          Int          @id @default(autoincrement())
   name        String

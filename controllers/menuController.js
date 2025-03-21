@@ -70,3 +70,8 @@ exports.deleteMenu = asyncErrorHandle(async (req, res) => {
   await prisma.menu.delete({ where: { id: parseInt(req.params.id) } });
   res.json({ message: "Menu deleted successfully" });
 });
+
+exports.getAllMenus = asyncErrorHandle(async (req, res) => {
+  const menus = await prisma.menu.findMany({ include: { menuItems: true } });
+  res.json(menus);
+});

@@ -20,12 +20,38 @@ CREATE TABLE `Restaurant` (
     `location` VARCHAR(191) NOT NULL,
     `description` TEXT NULL,
     `imageUrl` VARCHAR(191) NULL,
+    `mediaType` VARCHAR(191) NULL,
     `districtId` INTEGER NULL,
     `userId` INTEGER NOT NULL,
     `createdAt` DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
     `updatedAt` DATETIME(3) NOT NULL,
 
-    UNIQUE INDEX `Restaurant_userId_key`(`userId`),
+    PRIMARY KEY (`id`)
+) DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+
+-- CreateTable
+CREATE TABLE `Highlight` (
+    `id` INTEGER NOT NULL AUTO_INCREMENT,
+    `restaurantId` INTEGER NOT NULL,
+    `status` ENUM('PENDING', 'APPROVED', 'REJECTED') NOT NULL DEFAULT 'PENDING',
+    `createdAt` DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
+    `updatedAt` DATETIME(3) NOT NULL,
+    `approvedBy` INTEGER NULL,
+    `approvedAt` DATETIME(3) NULL,
+
+    PRIMARY KEY (`id`)
+) DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+
+-- CreateTable
+CREATE TABLE `Hero` (
+    `id` INTEGER NOT NULL AUTO_INCREMENT,
+    `restaurantId` INTEGER NOT NULL,
+    `status` ENUM('PENDING', 'APPROVED', 'REJECTED') NOT NULL DEFAULT 'PENDING',
+    `createdAt` DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
+    `updatedAt` DATETIME(3) NOT NULL,
+    `approvedBy` INTEGER NULL,
+    `approvedAt` DATETIME(3) NULL,
+
     PRIMARY KEY (`id`)
 ) DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
 
@@ -42,6 +68,7 @@ CREATE TABLE `District` (
 CREATE TABLE `Environment` (
     `id` INTEGER NOT NULL AUTO_INCREMENT,
     `imageUrl` VARCHAR(191) NOT NULL,
+    `mediaType` VARCHAR(191) NULL,
     `description` TEXT NULL,
     `restaurantId` INTEGER NOT NULL,
 
@@ -67,6 +94,7 @@ CREATE TABLE `MenuItem` (
     `description` TEXT NULL,
     `price` DOUBLE NOT NULL,
     `imageUrl` VARCHAR(191) NULL,
+    `mediaType` VARCHAR(191) NULL,
     `createdAt` DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
     `updatedAt` DATETIME(3) NOT NULL,
     `menuId` INTEGER NOT NULL,
@@ -80,6 +108,7 @@ CREATE TABLE `SignatureDish` (
     `name` VARCHAR(191) NOT NULL,
     `description` TEXT NULL,
     `imageUrl` VARCHAR(191) NULL,
+    `mediaType` VARCHAR(191) NULL,
     `restaurantId` INTEGER NOT NULL,
 
     PRIMARY KEY (`id`)
@@ -104,10 +133,22 @@ CREATE TABLE `RestaurantTag` (
 ) DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
 
 -- AddForeignKey
-ALTER TABLE `Restaurant` ADD CONSTRAINT `Restaurant_userId_fkey` FOREIGN KEY (`userId`) REFERENCES `User`(`id`) ON DELETE RESTRICT ON UPDATE CASCADE;
+ALTER TABLE `Restaurant` ADD CONSTRAINT `Restaurant_userId_fkey` FOREIGN KEY (`userId`) REFERENCES `User`(`id`) ON DELETE CASCADE ON UPDATE CASCADE;
 
 -- AddForeignKey
 ALTER TABLE `Restaurant` ADD CONSTRAINT `Restaurant_districtId_fkey` FOREIGN KEY (`districtId`) REFERENCES `District`(`id`) ON DELETE SET NULL ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE `Highlight` ADD CONSTRAINT `Highlight_restaurantId_fkey` FOREIGN KEY (`restaurantId`) REFERENCES `Restaurant`(`id`) ON DELETE CASCADE ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE `Highlight` ADD CONSTRAINT `Highlight_approvedBy_fkey` FOREIGN KEY (`approvedBy`) REFERENCES `User`(`id`) ON DELETE SET NULL ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE `Hero` ADD CONSTRAINT `Hero_restaurantId_fkey` FOREIGN KEY (`restaurantId`) REFERENCES `Restaurant`(`id`) ON DELETE CASCADE ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE `Hero` ADD CONSTRAINT `Hero_approvedBy_fkey` FOREIGN KEY (`approvedBy`) REFERENCES `User`(`id`) ON DELETE SET NULL ON UPDATE CASCADE;
 
 -- AddForeignKey
 ALTER TABLE `Environment` ADD CONSTRAINT `Environment_restaurantId_fkey` FOREIGN KEY (`restaurantId`) REFERENCES `Restaurant`(`id`) ON DELETE RESTRICT ON UPDATE CASCADE;
