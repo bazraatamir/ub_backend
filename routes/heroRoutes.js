@@ -1,7 +1,9 @@
 const express = require("express");
-const { body } = require("express-validator");
+const {body} = require("express-validator");
 const router = express.Router();
-const { auth, authorize } = require("../middleware/auth");
+const {auth, authorize} = require("../middleware/auth");
+const upload = require("../middleware/uploadMiddleware");
+
 const {
   getAllHeroes,
   getHeroById,
@@ -19,7 +21,7 @@ const heroValidation = [
     .withMessage("Invalid restaurant ID")
     .custom(async (value) => {
       const restaurant = await prisma.restaurant.findUnique({
-        where: { id: parseInt(value) },
+        where: {id: parseInt(value)},
       });
       if (!restaurant) throw new Error("Restaurant not found");
       return true;
@@ -28,21 +30,18 @@ const heroValidation = [
 
 router.get("/", getAllHeroes);
 router.get("/:id", getHeroById);
-router.post("/", auth, authorize("create", "Hero"), heroValidation, createHero);
-
-router.patch(
-  "/:id/approve",
+router.post(
+  "/",
   auth,
-  authorize("update", "Hero"),
-  approveHero
+  authorize("create", "Hero"),
+  upload.single("file"),
+  heroValidation,
+  createHero
 );
 
-router.patch(
-  "/:id/reject",
-  auth,
-  authorize("update", "Hero"),
-  rejectHero
-);
+router.patch("/:id/approve", auth, authorize("update", "Hero"), approveHero);
+
+router.patch("/:id/reject", auth, authorize("update", "Hero"), rejectHero);
 
 router.put(
   "/:id",

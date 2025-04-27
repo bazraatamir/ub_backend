@@ -1,6 +1,6 @@
 const express = require("express");
-const { body } = require("express-validator");
-const { auth, authorize } = require("../middleware/auth");
+const {body} = require("express-validator");
+const {auth, authorize} = require("../middleware/auth");
 const {
   createRestaurant,
   getAllRestaurants,
@@ -9,7 +9,7 @@ const {
   deleteRestaurant,
   approveRestaurant,
 } = require("../controllers/restaurantController");
-
+const upload = require("../middleware/uploadMiddleware");
 const router = express.Router();
 
 const restaurantValidation = [
@@ -23,17 +23,13 @@ const restaurantValidation = [
 router.post(
   "/",
   auth,
-  authorize(["RESTAURANT_OWNER", "ADMIN"]),
-  restaurantValidation,
+  authorize("create", "Restaurant"),
+  // restaurantValidation,
+  upload.single("file"),
   createRestaurant
 );
 
-router.post(
-  "/:id/approve",
-  auth,
-  authorize(["ADMIN"]),
-  approveRestaurant
-);
+router.post("/:id/approve", auth, authorize(["ADMIN"]), approveRestaurant);
 
 router.get("/", auth, getAllRestaurants);
 router.get("/:id", auth, getRestaurantById);

@@ -69,8 +69,10 @@ model Hero {
   updatedAt     DateTime    @updatedAt
   approvedBy    Int?
   approvedAt    DateTime? 
-  admin         User?       @relation("HeroApprovedBy", fields: [approvedBy], references: [id])
+  admin         User?       @relation("HeroApprovedBy", fields: [approvedBy], references: [id], onDelete: Cascade)
+  imageUrl      String?     // Зурагны URL хадгалах талбар
 }
+
 
 enum Status {
   PENDING

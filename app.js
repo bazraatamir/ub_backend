@@ -1,10 +1,10 @@
 const express = require("express");
 const cors = require("cors");
-const { PrismaClient } = require("@prisma/client");
-require("dotenv").config();
+const {PrismaClient} = require("@prisma/client");
 const fileUpload = require("express-fileupload");
 const fs = require("fs");
 const path = require("path");
+require("dotenv").config();
 
 const userRoutes = require("./routes/userRoutes");
 const restaurantRoutes = require("./routes/restaurantRoutes");
@@ -17,29 +17,32 @@ const tagRoutes = require("./routes/tagRoutes");
 const restaurantTagRoutes = require("./routes/restaurantTagRoutes");
 const highlightRoutes = require("./routes/highlightRoutes");
 const heroRoutes = require("./routes/heroRoutes");
+const cookieParser = require("cookie-parser");
 
 const app = express();
+app.use(cookieParser());
+
 const prisma = new PrismaClient();
 
-const uploadDir = path.join(process.cwd(), "uploads");
-if (!fs.existsSync(uploadDir)) {
-  fs.mkdirSync(uploadDir, { recursive: true });
-}
+const whitelist = [
+  "http://localhost:5173",
+  "https://azjargaliinsodsolongo.com/",
+];
 
-app.use(cors());
+const corsOptions = {
+  origin: (origin, callback) => {
+    if (whitelist.indexOf(origin) !== -1 || !origin) {
+      callback(null, true);
+    } else {
+      callback(new Error("Not allowed by CORS"));
+    }
+  },
+  credentials: true,
+};
+
+app.use(cors(corsOptions));
 app.use(express.json());
-app.use(express.urlencoded({ extended: true }));
-
-// File upload middleware configuration
-app.use(
-  fileUpload({
-    createParentPath: true,
-    limits: { fileSize: 5 * 1024 * 1024 }, // 5MB limit
-    useTempFiles: false, // Don't use temp files
-    debug: true,
-    abortOnLimit: true,
-  })
-);
+app.use(express.urlencoded({extended: true}));
 
 app.use("/api/users", userRoutes);
 app.use("/api/restaurants", restaurantRoutes);
@@ -54,17 +57,34 @@ app.use("/api/highlights", highlightRoutes);
 app.use("/api/heros", heroRoutes);
 
 // Serve uploads directory
-app.use("/uploads", express.static(uploadDir));
+app.use("/uploads", express.static("uploads"));
+
+app.use((req, res, next) => {
+  const error = new Error(`Not Found: ${req.originalUrl}`);
+  error.status = 404;
+  next(error);
+});
 
 app.use((err, req, res, next) => {
-  console.error(err.stack);
-  res.status(500).json({ error: "Something went wrong!" });
-});
+  console.log(err);
+  const statusCode = err.status || 500;
 
-app.use((req, res) => {
-  res.status(404).json({ error: "Not found" });
-});
+  const errorDetails = {
+    error: true,
+    message: err.message || "Internal Server Error",
+    statusCode,
+    method: req.method,
+    path: req.originalUrl,
+    timestamp: new Date().toISOString(),
+  };
 
+  if (process.env.NODE_ENV !== "production") {
+    errorDetails.stack = err.stack;
+  }
+
+  // console.error("Error occurred:", errorDetails);
+  res.status(statusCode).json(errorDetails);
+});
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {
   console.log(`Server is running on port ${PORT}`);
