@@ -19,6 +19,7 @@ const highlightRoutes = require("./routes/highlightRoutes");
 const heroRoutes = require("./routes/heroRoutes");
 const cookieParser = require("cookie-parser");
 const feedbackRoutes = require("./routes/feedback");
+const homeRoutes = require("./routes/homeRoutes");
 
 const app = express();
 app.use(cookieParser());
@@ -57,8 +58,8 @@ app.use("/api/restaurant-tags", restaurantTagRoutes);
 app.use("/api/highlights", highlightRoutes);
 app.use("/api/heros", heroRoutes);
 app.use("/api/feedback", feedbackRoutes);
+app.use("/api/home", homeRoutes);
 
-// Serve uploads directory
 app.use("/uploads", express.static("uploads"));
 
 app.use((req, res, next) => {
