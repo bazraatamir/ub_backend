@@ -1,4 +1,4 @@
-const {PrismaClient} = require("@prisma/client");
+const { PrismaClient } = require("@prisma/client");
 const prisma = new PrismaClient();
 const fs = require("fs");
 const path = require("path");
@@ -35,9 +35,9 @@ const uploadMedia = async (file) => {
 
     const ext = path.extname(file.name).toLowerCase();
     if (ext === ".png") {
-      await imageProcessor.png({quality: 75}).toFile(filePath);
+      await imageProcessor.png({ quality: 75 }).toFile(filePath);
     } else {
-      await imageProcessor.jpeg({quality: 75}).toFile(filePath);
+      await imageProcessor.jpeg({ quality: 75 }).toFile(filePath);
     }
   }
 
@@ -53,11 +53,11 @@ const deleteMedia = (mediaUrl) => {
 };
 
 const findEnvironment = async (id) =>
-  prisma.environment.findUnique({where: {id: parseInt(id)}});
+  prisma.environment.findUnique({ where: { id: parseInt(id) } });
 
 exports.getAllEnvironments = asyncErrorHandle(async (req, res) => {
   const environments = await prisma.environment.findMany({
-    include: {restaurant: true},
+    include: { restaurant: true },
   });
   res.json(environments);
 });
@@ -65,15 +65,15 @@ exports.getAllEnvironments = asyncErrorHandle(async (req, res) => {
 exports.getEnvironmentById = asyncErrorHandle(async (req, res) => {
   const environment = await findEnvironment(req.params.id);
   if (!environment)
-    return res.status(404).json({error: "Environment not found"});
+    return res.status(404).json({ error: "Environment not found" });
   res.json(environment);
 });
 
 exports.createEnvironment = asyncErrorHandle(async (req, res) => {
-  const {id} = req.user;
+  const { id } = req.user;
   console.log(req.file.filename);
   const restaurant = await prisma.restaurant.findFirst({
-    where: {userId: parseInt(id)},
+    where: { userId: parseInt(id) },
   });
 
   const environment = await prisma.environment.create({
@@ -88,12 +88,12 @@ exports.createEnvironment = asyncErrorHandle(async (req, res) => {
 });
 
 exports.updateEnvironment = asyncErrorHandle(async (req, res) => {
-  const {id} = req.params;
-  const {description} = req.body;
+  const { id } = req.params;
+  const { description } = req.body;
 
   const oldEnvironment = await findEnvironment(id);
   if (!oldEnvironment) {
-    return res.status(404).json({error: "Орчин олдсонгүй"});
+    return res.status(404).json({ error: "Орчин олдсонгүй" });
   }
 
   let imageUrl = oldEnvironment.imageUrl;
@@ -109,12 +109,12 @@ exports.updateEnvironment = asyncErrorHandle(async (req, res) => {
       imageUrl = uploadResult.url;
       mediaType = uploadResult.type;
     } catch (error) {
-      return res.status(400).json({error: error.message});
+      return res.status(400).json({ error: error.message });
     }
   }
 
   const environment = await prisma.environment.update({
-    where: {id: parseInt(id)},
+    where: { id: parseInt(id) },
     data: {
       imageUrl,
       mediaType,
@@ -128,9 +128,9 @@ exports.updateEnvironment = asyncErrorHandle(async (req, res) => {
 exports.deleteEnvironment = asyncErrorHandle(async (req, res) => {
   const environment = await findEnvironment(req.params.id);
   if (!environment)
-    return res.status(404).json({error: "Environment not found"});
+    return res.status(404).json({ error: "Environment not found" });
 
   if (environment.imageUrl) deleteMedia(environment.imageUrl);
-  await prisma.environment.delete({where: {id: parseInt(req.params.id)}});
-  res.json({message: "Environment deleted successfully"});
+  await prisma.environment.delete({ where: { id: parseInt(req.params.id) } });
+  res.json({ message: "Environment deleted successfully" });
 });
