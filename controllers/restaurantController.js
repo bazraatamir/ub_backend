@@ -97,7 +97,7 @@ const createRestaurant = asyncErrorHandle(async (req, res) => {
 
 const approveRestaurant = asyncErrorHandle(async (req, res) => {
   const {id} = req.params;
-
+  console.log(id);
   const restaurant = await prisma.restaurant.findUnique({
     where: {id: parseInt(id)},
   });
@@ -105,18 +105,32 @@ const approveRestaurant = asyncErrorHandle(async (req, res) => {
   if (!restaurant) {
     return res.status(404).json({message: "Restaurant not found"});
   }
-
-  const updatedRestaurant = await prisma.restaurant.update({
-    where: {id: parseInt(id)},
-    data: {
-      status: "APPROVED",
-      updatedAt: new Date(),
-    },
-    include: {
-      district: true,
-      user: true,
-    },
-  });
+  let updatedRestaurant;
+  if (restaurant.status == "APPROVED") {
+    updatedRestaurant = await prisma.restaurant.update({
+      where: {id: parseInt(id)},
+      data: {
+        status: "REJECTED",
+        updatedAt: new Date(),
+      },
+      include: {
+        district: true,
+        user: true,
+      },
+    });
+  } else {
+    updatedRestaurant = await prisma.restaurant.update({
+      where: {id: parseInt(id)},
+      data: {
+        status: "APPROVED",
+        updatedAt: new Date(),
+      },
+      include: {
+        district: true,
+        user: true,
+      },
+    });
+  }
 
   res.json({
     ...updatedRestaurant,
@@ -125,13 +139,7 @@ const approveRestaurant = asyncErrorHandle(async (req, res) => {
 });
 
 const getAllRestaurants = asyncErrorHandle(async (req, res) => {
-  const whereClause =
-    req.user?.role === "ADMIN" || req.user?.role === "RESTAURANT_OWNER"
-      ? {userId: req.user?.id}
-      : {status: "APPROVED"};
-
   const restaurants = await prisma.restaurant.findMany({
-    where: whereClause,
     include: {
       district: true,
       environment: true,
