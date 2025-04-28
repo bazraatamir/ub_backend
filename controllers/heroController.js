@@ -27,7 +27,6 @@ exports.getHeroById = asyncErrorHandle(async (req, res) => {
 
 exports.createHero = asyncErrorHandle(async (req, res) => {
   const {id} = req.user;
-
   const restaurant = await prisma.restaurant.findFirst({
     where: {userId: parseInt(id)},
   });
@@ -41,6 +40,7 @@ exports.createHero = asyncErrorHandle(async (req, res) => {
     data: {
       restaurantId: parseInt(restaurant.id),
       status: "PENDING",
+      imageUrl: req.file.filename,
     },
     include: {restaurant: true},
   });

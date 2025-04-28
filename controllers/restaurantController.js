@@ -57,17 +57,16 @@ const createRestaurant = asyncErrorHandle(async (req, res) => {
   const {name, location, description, districtId, tags} = req.body;
 
   const parsedTags = tags.split(",").map((tagId) => parseInt(tagId));
-  console.log(parsedTags);
 
   const restaurant = await prisma.restaurant.create({
     data: {
       name,
       location,
       description,
-      imageUrl: req.file.filename,
+      imageUrl: req.file ? req.file.path : null,
       districtId: districtId ? parseInt(districtId) : null,
       userId: req.user.id,
-      status: "PENDING",
+      status: "APPROVED",
     },
     include: {
       district: true,
@@ -97,7 +96,7 @@ const createRestaurant = asyncErrorHandle(async (req, res) => {
 
 const approveRestaurant = asyncErrorHandle(async (req, res) => {
   const {id} = req.params;
-  console.log(id);
+
   const restaurant = await prisma.restaurant.findUnique({
     where: {id: parseInt(id)},
   });
@@ -105,32 +104,18 @@ const approveRestaurant = asyncErrorHandle(async (req, res) => {
   if (!restaurant) {
     return res.status(404).json({message: "Restaurant not found"});
   }
-  let updatedRestaurant;
-  if (restaurant.status == "APPROVED") {
-    updatedRestaurant = await prisma.restaurant.update({
-      where: {id: parseInt(id)},
-      data: {
-        status: "REJECTED",
-        updatedAt: new Date(),
-      },
-      include: {
-        district: true,
-        user: true,
-      },
-    });
-  } else {
-    updatedRestaurant = await prisma.restaurant.update({
-      where: {id: parseInt(id)},
-      data: {
-        status: "APPROVED",
-        updatedAt: new Date(),
-      },
-      include: {
-        district: true,
-        user: true,
-      },
-    });
-  }
+
+  const updatedRestaurant = await prisma.restaurant.update({
+    where: {id: parseInt(id)},
+    data: {
+      status: "APPROVED",
+      updatedAt: new Date(),
+    },
+    include: {
+      district: true,
+      user: true,
+    },
+  });
 
   res.json({
     ...updatedRestaurant,

@@ -1,6 +1,6 @@
 const express = require("express");
 const cors = require("cors");
-const {PrismaClient} = require("@prisma/client");
+const { PrismaClient } = require("@prisma/client");
 const fileUpload = require("express-fileupload");
 const fs = require("fs");
 const path = require("path");
@@ -18,6 +18,7 @@ const restaurantTagRoutes = require("./routes/restaurantTagRoutes");
 const highlightRoutes = require("./routes/highlightRoutes");
 const heroRoutes = require("./routes/heroRoutes");
 const cookieParser = require("cookie-parser");
+const feedbackRoutes = require("./routes/feedback");
 
 const app = express();
 app.use(cookieParser());
@@ -42,7 +43,7 @@ const corsOptions = {
 
 app.use(cors(corsOptions));
 app.use(express.json());
-app.use(express.urlencoded({extended: true}));
+app.use(express.urlencoded({ extended: true }));
 
 app.use("/api/users", userRoutes);
 app.use("/api/restaurants", restaurantRoutes);
@@ -55,6 +56,7 @@ app.use("/api/tags", tagRoutes);
 app.use("/api/restaurant-tags", restaurantTagRoutes);
 app.use("/api/highlights", highlightRoutes);
 app.use("/api/heros", heroRoutes);
+app.use("/api/feedback", feedbackRoutes);
 
 // Serve uploads directory
 app.use("/uploads", express.static("uploads"));

@@ -23,6 +23,7 @@ CREATE TABLE `Restaurant` (
     `mediaType` VARCHAR(191) NULL,
     `districtId` INTEGER NULL,
     `userId` INTEGER NOT NULL,
+    `status` VARCHAR(191) NOT NULL DEFAULT 'PENDING',
     `createdAt` DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
     `updatedAt` DATETIME(3) NOT NULL,
 
@@ -51,6 +52,7 @@ CREATE TABLE `Hero` (
     `updatedAt` DATETIME(3) NOT NULL,
     `approvedBy` INTEGER NULL,
     `approvedAt` DATETIME(3) NULL,
+    `imageUrl` VARCHAR(191) NULL,
 
     PRIMARY KEY (`id`)
 ) DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
@@ -132,6 +134,20 @@ CREATE TABLE `RestaurantTag` (
     PRIMARY KEY (`restaurantId`, `tagId`)
 ) DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
 
+-- CreateTable
+CREATE TABLE `Feedback` (
+    `id` INTEGER NOT NULL AUTO_INCREMENT,
+    `name` VARCHAR(191) NOT NULL,
+    `email` VARCHAR(191) NOT NULL,
+    `message` TEXT NOT NULL,
+    `restaurantId` INTEGER NOT NULL,
+    `status` ENUM('PENDING', 'APPROVED', 'REJECTED') NOT NULL DEFAULT 'PENDING',
+    `createdAt` DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
+    `updatedAt` DATETIME(3) NOT NULL,
+
+    PRIMARY KEY (`id`)
+) DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+
 -- AddForeignKey
 ALTER TABLE `Restaurant` ADD CONSTRAINT `Restaurant_userId_fkey` FOREIGN KEY (`userId`) REFERENCES `User`(`id`) ON DELETE CASCADE ON UPDATE CASCADE;
 
@@ -148,7 +164,7 @@ ALTER TABLE `Highlight` ADD CONSTRAINT `Highlight_approvedBy_fkey` FOREIGN KEY (
 ALTER TABLE `Hero` ADD CONSTRAINT `Hero_restaurantId_fkey` FOREIGN KEY (`restaurantId`) REFERENCES `Restaurant`(`id`) ON DELETE CASCADE ON UPDATE CASCADE;
 
 -- AddForeignKey
-ALTER TABLE `Hero` ADD CONSTRAINT `Hero_approvedBy_fkey` FOREIGN KEY (`approvedBy`) REFERENCES `User`(`id`) ON DELETE SET NULL ON UPDATE CASCADE;
+ALTER TABLE `Hero` ADD CONSTRAINT `Hero_approvedBy_fkey` FOREIGN KEY (`approvedBy`) REFERENCES `User`(`id`) ON DELETE CASCADE ON UPDATE CASCADE;
 
 -- AddForeignKey
 ALTER TABLE `Environment` ADD CONSTRAINT `Environment_restaurantId_fkey` FOREIGN KEY (`restaurantId`) REFERENCES `Restaurant`(`id`) ON DELETE RESTRICT ON UPDATE CASCADE;
@@ -167,3 +183,6 @@ ALTER TABLE `RestaurantTag` ADD CONSTRAINT `RestaurantTag_restaurantId_fkey` FOR
 
 -- AddForeignKey
 ALTER TABLE `RestaurantTag` ADD CONSTRAINT `RestaurantTag_tagId_fkey` FOREIGN KEY (`tagId`) REFERENCES `Tag`(`id`) ON DELETE RESTRICT ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE `Feedback` ADD CONSTRAINT `Feedback_restaurantId_fkey` FOREIGN KEY (`restaurantId`) REFERENCES `Restaurant`(`id`) ON DELETE CASCADE ON UPDATE CASCADE;

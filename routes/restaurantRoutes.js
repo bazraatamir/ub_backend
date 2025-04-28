@@ -8,6 +8,7 @@ const {
   updateRestaurant,
   deleteRestaurant,
   approveRestaurant,
+  getRestaurantByUserId,
 } = require("../controllers/restaurantController");
 const upload = require("../middleware/uploadMiddleware");
 const router = express.Router();
@@ -31,8 +32,9 @@ router.post(
 
 router.post("/:id/approve", auth, authorize(["ADMIN"]), approveRestaurant);
 
-router.get("/", auth, getAllRestaurants);
-router.get("/:id", auth, getRestaurantById);
+router.get("/", getAllRestaurants);
+router.get("/:id", getRestaurantById);
+router.get("/user/:id");
 
 router.put(
   "/:id",
