@@ -1,2 +1,0 @@
--- AlterTable
-ALTER TABLE `restaurant` ADD COLUMN `status` VARCHAR(191) NOT NULL DEFAULT 'PENDING';

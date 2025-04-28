@@ -1,5 +1,5 @@
-const {PrismaClient} = require("@prisma/client");
-const {validationResult} = require("express-validator");
+const { PrismaClient } = require("@prisma/client");
+const { validationResult } = require("express-validator");
 const asyncErrorHandle = require("../middleware/asyncHandler");
 const prisma = new PrismaClient();
 const path = require("path");
@@ -36,9 +36,9 @@ const uploadMedia = async (file) => {
 
     const ext = path.extname(file.name).toLowerCase();
     if (ext === ".png") {
-      await imageProcessor.png({quality: 75}).toFile(uploadPath);
+      await imageProcessor.png({ quality: 75 }).toFile(uploadPath);
     } else {
-      await imageProcessor.jpeg({quality: 75}).toFile(uploadPath);
+      await imageProcessor.jpeg({ quality: 75 }).toFile(uploadPath);
     }
   }
 
@@ -51,10 +51,10 @@ const uploadMedia = async (file) => {
 const createRestaurant = asyncErrorHandle(async (req, res) => {
   const errors = validationResult(req);
   if (!errors.isEmpty()) {
-    return res.status(400).json({errors: errors.array()});
+    return res.status(400).json({ errors: errors.array() });
   }
 
-  const {name, location, description, districtId, tags} = req.body;
+  const { name, location, description, districtId, tags } = req.body;
 
   const parsedTags = tags.split(",").map((tagId) => parseInt(tagId));
   console.log(parsedTags);
@@ -64,10 +64,10 @@ const createRestaurant = asyncErrorHandle(async (req, res) => {
       name,
       location,
       description,
-      imageUrl: req.file.filename,
+      imageUrl: req.file ? req.file.path : null,
       districtId: districtId ? parseInt(districtId) : null,
       userId: req.user.id,
-      status: "PENDING",
+      status: "APPROVED",
     },
     include: {
       district: true,
@@ -96,18 +96,18 @@ const createRestaurant = asyncErrorHandle(async (req, res) => {
 });
 
 const approveRestaurant = asyncErrorHandle(async (req, res) => {
-  const {id} = req.params;
+  const { id } = req.params;
 
   const restaurant = await prisma.restaurant.findUnique({
-    where: {id: parseInt(id)},
+    where: { id: parseInt(id) },
   });
 
   if (!restaurant) {
-    return res.status(404).json({message: "Restaurant not found"});
+    return res.status(404).json({ message: "Restaurant not found" });
   }
 
   const updatedRestaurant = await prisma.restaurant.update({
-    where: {id: parseInt(id)},
+    where: { id: parseInt(id) },
     data: {
       status: "APPROVED",
       updatedAt: new Date(),
@@ -127,8 +127,8 @@ const approveRestaurant = asyncErrorHandle(async (req, res) => {
 const getAllRestaurants = asyncErrorHandle(async (req, res) => {
   const whereClause =
     req.user?.role === "ADMIN" || req.user?.role === "RESTAURANT_OWNER"
-      ? {userId: req.user?.id}
-      : {status: "APPROVED"};
+      ? { userId: req.user?.id }
+      : { status: "APPROVED" };
 
   const restaurants = await prisma.restaurant.findMany({
     where: whereClause,
@@ -154,9 +154,9 @@ const getAllRestaurants = asyncErrorHandle(async (req, res) => {
 });
 
 const getRestaurantById = asyncErrorHandle(async (req, res) => {
-  const {id} = req.params;
+  const { id } = req.params;
   const restaurant = await prisma.restaurant.findUnique({
-    where: {id: parseInt(id)},
+    where: { id: parseInt(id) },
     include: {
       district: true,
       environment: true,
@@ -176,7 +176,7 @@ const getRestaurantById = asyncErrorHandle(async (req, res) => {
   });
 
   if (!restaurant) {
-    return res.status(404).json({message: "Restaurant not found"});
+    return res.status(404).json({ message: "Restaurant not found" });
   }
 
   if (
@@ -184,26 +184,26 @@ const getRestaurantById = asyncErrorHandle(async (req, res) => {
     restaurant.userId !== req.user?.id &&
     restaurant.status !== "APPROVED"
   ) {
-    return res.status(403).json({message: "Restaurant is pending approval"});
+    return res.status(403).json({ message: "Restaurant is pending approval" });
   }
 
   res.json(restaurant);
 });
 
 const updateRestaurant = asyncErrorHandle(async (req, res) => {
-  const {id} = req.params;
-  const {name, location, description, districtId} = req.body;
+  const { id } = req.params;
+  const { name, location, description, districtId } = req.body;
 
   const restaurant = await prisma.restaurant.findUnique({
-    where: {id: parseInt(id)},
+    where: { id: parseInt(id) },
   });
 
   if (!restaurant) {
-    return res.status(404).json({message: "Restaurant not found"});
+    return res.status(404).json({ message: "Restaurant not found" });
   }
 
   if (restaurant.userId !== req.user.id && req.user.role !== "ADMIN") {
-    return res.status(403).json({message: "Not authorized"});
+    return res.status(403).json({ message: "Not authorized" });
   }
 
   let mediaUrl = restaurant.imageUrl;
@@ -221,12 +221,12 @@ const updateRestaurant = asyncErrorHandle(async (req, res) => {
         }
       }
     } catch (error) {
-      return res.status(400).json({error: error.message});
+      return res.status(400).json({ error: error.message });
     }
   }
 
   const updatedRestaurant = await prisma.restaurant.update({
-    where: {id: parseInt(id)},
+    where: { id: parseInt(id) },
     data: {
       name,
       location,
@@ -244,31 +244,31 @@ const updateRestaurant = asyncErrorHandle(async (req, res) => {
 });
 
 const deleteRestaurant = asyncErrorHandle(async (req, res) => {
-  const {id} = req.params;
+  const { id } = req.params;
 
   const restaurant = await prisma.restaurant.findUnique({
-    where: {id: parseInt(id)},
+    where: { id: parseInt(id) },
   });
 
   if (!restaurant) {
-    return res.status(404).json({message: "Restaurant not found"});
+    return res.status(404).json({ message: "Restaurant not found" });
   }
 
   if (restaurant.userId !== req.user.id && req.user.role !== "ADMIN") {
-    return res.status(403).json({message: "Not authorized"});
+    return res.status(403).json({ message: "Not authorized" });
   }
 
   await prisma.$transaction(async (prisma) => {
     await prisma.environment.deleteMany({
-      where: {restaurantId: parseInt(id)},
+      where: { restaurantId: parseInt(id) },
     });
 
     await prisma.signatureDish.deleteMany({
-      where: {restaurantId: parseInt(id)},
+      where: { restaurantId: parseInt(id) },
     });
 
     await prisma.restaurantTag.deleteMany({
-      where: {restaurantId: parseInt(id)},
+      where: { restaurantId: parseInt(id) },
     });
 
     await prisma.menuItem.deleteMany({
@@ -280,7 +280,7 @@ const deleteRestaurant = asyncErrorHandle(async (req, res) => {
     });
 
     await prisma.menu.deleteMany({
-      where: {restaurantId: parseInt(id)},
+      where: { restaurantId: parseInt(id) },
     });
 
     if (restaurant.imageUrl) {
@@ -291,11 +291,11 @@ const deleteRestaurant = asyncErrorHandle(async (req, res) => {
     }
 
     await prisma.restaurant.delete({
-      where: {id: parseInt(id)},
+      where: { id: parseInt(id) },
     });
   });
 
-  res.json({message: "Restaurant deleted successfully"});
+  res.json({ message: "Restaurant deleted successfully" });
 });
 
 module.exports = {
