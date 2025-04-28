@@ -198,6 +198,43 @@ const getRestaurantById = asyncErrorHandle(async (req, res) => {
   res.json(restaurant);
 });
 
+const getRestaurantByUserId = asyncErrorHandle(async (req, res) => {
+  const {id} = req.user;
+  const restaurant = await prisma.restaurant.findUnique({
+    where: {userId: parseInt(id)},
+    include: {
+      district: true,
+      environment: true,
+      signatureDish: true,
+      hero: true,
+      tags: {
+        include: {
+          tag: true,
+        },
+      },
+      menus: {
+        include: {
+          menuItems: true,
+        },
+      },
+    },
+  });
+
+  if (!restaurant) {
+    return res.status(404).json({message: "Restaurant not found"});
+  }
+
+  if (
+    req.user?.role !== "ADMIN" &&
+    restaurant.userId !== req.user?.id &&
+    restaurant.status !== "APPROVED"
+  ) {
+    return res.status(403).json({message: "Restaurant is pending approval"});
+  }
+
+  res.json(restaurant);
+});
+
 const updateRestaurant = asyncErrorHandle(async (req, res) => {
   const {id} = req.params;
   const {name, location, description, districtId} = req.body;
@@ -313,4 +350,5 @@ module.exports = {
   updateRestaurant,
   deleteRestaurant,
   approveRestaurant,
+  getRestaurantByUserId,
 };
