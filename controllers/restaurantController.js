@@ -131,7 +131,6 @@ const getAllRestaurants = asyncErrorHandle(async (req, res) => {
       : { status: "APPROVED" };
 
   const restaurants = await prisma.restaurant.findMany({
-    where: whereClause,
     include: {
       district: true,
       environment: true,
