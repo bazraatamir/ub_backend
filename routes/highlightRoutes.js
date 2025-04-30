@@ -38,14 +38,14 @@ router.post(
   createHighlight
 );
 
-router.patch(
+router.post(
   "/:id/approve",
   auth,
   authorize("update", "Highlight"),
   approveHighlight
 );
 
-router.patch(
+router.post(
   "/:id/reject",
   auth,
   authorize("update", "Highlight"),

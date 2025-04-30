@@ -69,7 +69,7 @@ const createRestaurant = asyncErrorHandle(async (req, res) => {
       imageUrl: req.file ? req.file.path : null,
       districtId: districtId ? parseInt(districtId) : null,
       userId: req.user.id,
-      status: "APPROVED",
+      status: "PENDING",
     },
     include: {
       district: true,
@@ -111,7 +111,7 @@ const approveRestaurant = asyncErrorHandle(async (req, res) => {
   const updatedRestaurant = await prisma.restaurant.update({
     where: {id: parseInt(id)},
     data: {
-      status: "APPROVED",
+      status: restaurant.status === "APPROVED" ? "PENDING" : "APPROVED",
       updatedAt: new Date(),
     },
     include: {
@@ -122,7 +122,7 @@ const approveRestaurant = asyncErrorHandle(async (req, res) => {
 
   res.json({
     ...updatedRestaurant,
-    message: "Restaurant approved successfully",
+    message: `Restaurant status changed to ${updatedRestaurant.status}`,
   });
 });
 

@@ -57,8 +57,20 @@ exports.createHighlight = asyncErrorHandle(async (req, res) => {
 exports.approveHighlight = asyncErrorHandle(async (req, res) => {
   const highlight = await prisma.highlight.findUnique({
     where: { id: parseInt(req.params.id) },
+    include: { restaurant: true },
   });
-  if (!highlight) return res.status(404).json({ error: "Highlight not found" });
+
+  if (!highlight) {
+    return res.status(404).json({ error: "Highlight not found" });
+  }
+
+  if (highlight.status === "APPROVED") {
+    return res.status(400).json({ error: "Highlight is already approved" });
+  }
+
+  if (highlight.status === "REJECTED") {
+    return res.status(400).json({ error: "Cannot approve a rejected highlight" });
+  }
 
   const updatedHighlight = await prisma.highlight.update({
     where: { id: parseInt(req.params.id) },
@@ -69,7 +81,8 @@ exports.approveHighlight = asyncErrorHandle(async (req, res) => {
     },
     include: { restaurant: true },
   });
-  res.json({ message: "Highlight approved", highlight: updatedHighlight });
+
+  res.json({ message: "Highlight approved successfully", highlight: updatedHighlight });
 });
 
 exports.rejectHighlight = asyncErrorHandle(async (req, res) => {
