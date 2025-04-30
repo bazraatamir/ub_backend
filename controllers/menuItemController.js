@@ -1,57 +1,6 @@
 const { PrismaClient } = require("@prisma/client");
 const prisma = new PrismaClient();
-const fs = require("fs");
-const path = require("path");
 const asyncErrorHandle = require("../middleware/asyncHandler");
-const sharp = require("sharp");
-
-const uploadMedia = async (file) => {
-  const fileName = `${Date.now()}${path.extname(file.name)}`;
-  const uploadPath = path.join(process.cwd(), "uploads", fileName);
-  
-  const allowedImageTypes = ['image/jpeg', 'image/png'];
-  const allowedVideoTypes = ['video/mp4', 'video/quicktime'];
-  const maxSize = 100 * 1024 * 1024;
-
-  if (![...allowedImageTypes, ...allowedVideoTypes].includes(file.mimetype)) {
-    throw new Error('Буруу төрлийн файл. Зөвхөн JPEG, PNG, болон MP4 файл оруулна уу.');
-  }
-
-  if (file.size > maxSize) {
-    throw new Error('Файл хэт том байна. Дээд хэмжээ 100MB байх ёстой.');
-  }
-
-  const isVideo = file.mimetype.startsWith('video/');
-  
-  if (isVideo) {
-    await file.mv(uploadPath);
-  } else {
-    const imageProcessor = sharp(file.data)
-      .resize(1024, 768, {
-        fit: 'inside',
-        withoutEnlargement: true
-      });
-
-    const ext = path.extname(file.name).toLowerCase();
-    if (ext === '.png') {
-      await imageProcessor.png({ quality: 75 }).toFile(uploadPath);
-    } else {
-      await imageProcessor.jpeg({ quality: 75 }).toFile(uploadPath);
-    }
-  }
-    
-  return {
-    url: `/uploads/${fileName}`,
-    type: isVideo ? 'video' : 'image'
-  };
-};
-
-const deleteImage = (imageUrl) => {
-  if (imageUrl) {
-    const imagePath = path.join(process.cwd(), imageUrl);
-    if (fs.existsSync(imagePath)) fs.unlinkSync(imagePath);
-  }
-};
 
 exports.getAllMenuItems = asyncErrorHandle(async (req, res) => {
   const menuItems = await prisma.menuItem.findMany({ include: { menu: true } });
@@ -67,54 +16,78 @@ exports.getMenuItemById = asyncErrorHandle(async (req, res) => {
 
 exports.createMenuItem = asyncErrorHandle(async (req, res) => {
   const { name, description, price, menuId } = req.body;
-  let mediaUrl = null;
-  let mediaType = null;
 
-  if (req.files?.media) {
-    try {
-      const uploadResult = await uploadMedia(req.files.media);
-      mediaUrl = uploadResult.url;
-      mediaType = uploadResult.type;
-    } catch (error) {
-      return res.status(400).json({ error: error.message });
-    }
+  if (!name || !price || !menuId) {
+    return res.status(400).json({ error: "Name, price, and menuId are required." });
   }
 
-  const menuItem = await prisma.menuItem.create({
-    data: {
-      name,
-      description,
-      price: parseFloat(price),
-      imageUrl: mediaUrl,
-      mediaType,
-      menuId: parseInt(menuId)
+  try {
+    const menuItem = await prisma.menuItem.create({
+      data: {
+        name,
+        description,
+        price: parseFloat(price),
+        menuId: parseInt(menuId)
+      }
+    });
+    res.status(201).json(menuItem);
+  } catch (error) {
+    console.error("Error creating menu item:", error);
+    if (error instanceof Prisma.PrismaClientValidationError) {
+        return res.status(400).json({ error: "Invalid data provided.", details: error.message });
+    } else if (isNaN(parseFloat(price)) || isNaN(parseInt(menuId))) {
+        return res.status(400).json({ error: "Invalid price or menuId format." });
     }
-  });
-  res.status(201).json(menuItem);
+    res.status(500).json({ error: "Failed to create menu item." });
+  }
 });
 
 exports.updateMenuItem = asyncErrorHandle(async (req, res) => {
   const { id } = req.params;
   const { name, description, price } = req.body;
-  const menuItem = await prisma.menuItem.findUnique({ where: { id: parseInt(id) } });
-  if (!menuItem) return res.status(404).json({ error: "Menu item not found" });
 
-  if (req.files?.imageUrl) deleteImage(menuItem.imageUrl);
-  const imageUrl = req.files?.imageUrl ? uploadMedia(req.files.imageUrl) : menuItem.imageUrl;
+  let parsedPrice = price !== undefined ? parseFloat(price) : undefined;
+  if (price !== undefined && isNaN(parsedPrice)) {
+    return res.status(400).json({ error: "Invalid price format." });
+  }
 
-  const updatedMenuItem = await prisma.menuItem.update({
-    where: { id: parseInt(id) },
-    data: { name, description, price: price ? parseFloat(price) : undefined, imageUrl }
-  });
-  res.json(updatedMenuItem);
+  try {
+    const menuItem = await prisma.menuItem.findUnique({ where: { id: parseInt(id) } });
+    if (!menuItem) return res.status(404).json({ error: "Menu item not found" });
+
+    const updatedMenuItem = await prisma.menuItem.update({
+      where: { id: parseInt(id) },
+      data: {
+        ...(name !== undefined && { name }),
+        ...(description !== undefined && { description }),
+        ...(parsedPrice !== undefined && { price: parsedPrice }),
+      }
+    });
+    res.json(updatedMenuItem);
+  } catch (error) {
+    console.error("Error updating menu item:", error);
+     if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2025') {
+        return res.status(404).json({ error: "Menu item not found." });
+    } else if (error instanceof Prisma.PrismaClientValidationError) {
+        return res.status(400).json({ error: "Invalid data provided.", details: error.message });
+    }
+    res.status(500).json({ error: "Failed to update menu item." });
+  }
 });
 
 exports.deleteMenuItem = asyncErrorHandle(async (req, res) => {
   const { id } = req.params;
-  const menuItem = await prisma.menuItem.findUnique({ where: { id: parseInt(id) } });
-  if (!menuItem) return res.status(404).json({ error: "Menu item not found" });
+  try {
+    const menuItem = await prisma.menuItem.findUnique({ where: { id: parseInt(id) } });
+    if (!menuItem) return res.status(404).json({ error: "Menu item not found" });
 
-  deleteImage(menuItem.imageUrl);
-  await prisma.menuItem.delete({ where: { id: parseInt(id) } });
-  res.json({ message: "Menu item deleted successfully" });
+    await prisma.menuItem.delete({ where: { id: parseInt(id) } });
+    res.json({ message: "Menu item deleted successfully" });
+  } catch (error) {
+     console.error("Error deleting menu item:", error);
+     if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2025') {
+        return res.status(404).json({ error: "Menu item not found." });
+    }
+    res.status(500).json({ error: "Failed to delete menu item." });
+  }
 });
