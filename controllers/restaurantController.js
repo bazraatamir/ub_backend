@@ -56,7 +56,10 @@ const createRestaurant = asyncErrorHandle(async (req, res) => {
 
   const {name, location, description, districtId, tags} = req.body;
 
-  const parsedTags = tags.split(",").map((tagId) => parseInt(tagId));
+  // Check if tags is a non-empty string before splitting
+  const parsedTags = typeof tags === 'string' && tags.length > 0
+    ? tags.split(",").map((tagId) => parseInt(tagId.trim())) // Also trim whitespace
+    : []; // Default to an empty array if tags is not a valid string
 
   const restaurant = await prisma.restaurant.create({
     data: {

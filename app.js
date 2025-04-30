@@ -45,13 +45,14 @@ const corsOptions = {
 app.use(cors(corsOptions));
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
+app.use(fileUpload());
 
 app.use("/api/users", userRoutes);
 app.use("/api/restaurants", restaurantRoutes);
 app.use("/api/districts", districtRoutes);
 app.use("/api/environments", environmentRoutes);
 app.use("/api/menus", menuRoutes);
-app.use("/api/menu-items", menuItemRoutes);
+app.use("/api/menuitems", menuItemRoutes);
 app.use("/api/signature-dishes", signatureDishRoutes);
 app.use("/api/tags", tagRoutes);
 app.use("/api/restaurant-tags", restaurantTagRoutes);
