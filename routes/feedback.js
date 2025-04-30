@@ -30,7 +30,6 @@ const feedbackValidation = [
 // Create new feedback
 router.post(
   "/",
-
   feedbackValidation,
   createFeedback
 );
@@ -38,7 +37,6 @@ router.post(
 // Get all feedback for a specific restaurant
 router.get(
   "/restaurant/:restaurantId",
-
   getRestaurantFeedback
 );
 

@@ -3,8 +3,23 @@ const prisma = new PrismaClient();
 const asyncErrorHandle = require("../middleware/asyncHandler");
 
 exports.getAllMenuItems = asyncErrorHandle(async (req, res) => {
-  const menuItems = await prisma.menuItem.findMany({ include: { menu: true } });
-  res.json(menuItems);
+  // Fetch all menu items, including the menu and the restaurant it belongs to
+  const menuItems = await prisma.menuItem.findMany({
+    include: {
+      menu: {
+        include: {
+          restaurant: true, // Include restaurant data
+        },
+      },
+    },
+  });
+
+  // Filter the menu items to include only those from APPROVED restaurants
+  const approvedMenuItems = menuItems.filter(
+    (item) => item.menu?.restaurant?.status === "APPROVED"
+  );
+
+  res.json(approvedMenuItems); // Return only approved items
 });
 
 exports.getMenuItemById = asyncErrorHandle(async (req, res) => {

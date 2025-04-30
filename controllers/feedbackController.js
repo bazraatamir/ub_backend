@@ -35,10 +35,11 @@ exports.getRestaurantFeedback = asyncErrorHandle(async (req, res) => {
   const {restaurantId} = req.params;
   const {status} = req.query;
 
-  if (req.user.role === "RESTAURANT_OWNER") {
+  if (req.user && req.user.role === "RESTAURANT_OWNER") {
     const restaurant = await prisma.restaurant.findFirst({
       where: {
         id: parseInt(restaurantId),
+        userId: req.user.id,
       },
     });
 
@@ -53,10 +54,10 @@ exports.getRestaurantFeedback = asyncErrorHandle(async (req, res) => {
     restaurantId: parseInt(restaurantId),
   };
 
-  if (req.user.role !== "RESTAURANT_OWNER") {
-    whereClause.status = "APPROVED";
-  } else if (status) {
+  if (req.user && req.user.role === "RESTAURANT_OWNER" && status) {
     whereClause.status = status.toUpperCase();
+  } else {
+    whereClause.status = "APPROVED";
   }
 
   console.log("Where Clause:", whereClause);
