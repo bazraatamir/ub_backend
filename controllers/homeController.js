@@ -79,3 +79,41 @@ exports.deleteVideo = asyncErrorHandle(async (req, res) => {
     data: null,
   });
 });
+
+exports.approveVideo = asyncErrorHandle(async (req, res) => {
+  const { id } = req.params;
+  const video = await prisma.home.findUnique({
+    where: { id: parseInt(id) },
+  });
+
+  if (!video) {
+    return res.status(404).json({ error: "Видео олдсонгүй" });
+  }
+
+  const updatedVideo = await prisma.home.update({
+    where: { id: parseInt(id) },
+    data: {
+      status: video.status === "APPROVED" ? "PENDING" : "APPROVED",
+    },
+  });
+
+  res.json({
+    message: `Видео статус ${updatedVideo.status === "APPROVED" ? "баталгаажлаа" : "хүлээгдэж буй"}`,
+    data: updatedVideo,
+  });
+});
+
+exports.getApprovedVideos = asyncErrorHandle(async (req, res) => {
+  const videos = await prisma.home.findMany({
+    where: {
+      status: "APPROVED"
+    },
+    orderBy: {
+      createdAt: "desc",
+    },
+  });
+  res.json({
+    message: "Баталгаажсан видеонууд",
+    data: videos,
+  });
+});

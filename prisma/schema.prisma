@@ -161,6 +161,7 @@ model Feedback {
 model Home {
   id Int @id @default(autoincrement())
   videoUrl String
+  status Status @default(PENDING)
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 }
