@@ -1,7 +1,6 @@
 const express = require("express");
 const cors = require("cors");
 const { PrismaClient } = require("@prisma/client");
-const fileUpload = require("express-fileupload");
 const fs = require("fs");
 const path = require("path");
 require("dotenv").config();
@@ -45,7 +44,6 @@ const corsOptions = {
 app.use(cors(corsOptions));
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
-app.use(fileUpload());
 
 app.use("/api/users", userRoutes);
 app.use("/api/restaurants", restaurantRoutes);

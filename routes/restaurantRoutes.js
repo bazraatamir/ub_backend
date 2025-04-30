@@ -40,6 +40,7 @@ router.put(
   "/:id",
   auth,
   authorize(["RESTAURANT_OWNER", "ADMIN"]),
+  upload.single("file"),
   restaurantValidation,
   updateRestaurant
 );
